@@ -163,6 +163,10 @@ describe("[checkout-com] webhook normalisation", function () {
     assert.equal(event.refund?.status, "succeeded");
     assert.deepEqual(event.refund?.amount, { value: 700, currency: "EUR" });
   });
+});
+
+describe("[checkout-com] webhook normalisation from the body alone", function () {
+  this.timeout(SUITE_TIMEOUT);
 
   it("reports a declined refund as refund.failed", async () => {
     const event = assertEvent(

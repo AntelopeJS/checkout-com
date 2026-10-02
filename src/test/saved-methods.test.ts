@@ -107,6 +107,10 @@ describe("[checkout-com] saved payment methods", function () {
       tier: "gold",
     });
   });
+});
+
+describe("[checkout-com] saved payment methods without a record", function () {
+  this.timeout(SUITE_TIMEOUT);
 
   it("charges a card saved some other way without a chain, and cannot date it", async function () {
     const target = SuiteTarget();

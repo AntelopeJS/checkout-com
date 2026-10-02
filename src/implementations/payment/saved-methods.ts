@@ -1,3 +1,5 @@
+import type { Payment } from "@antelopejs/interface-payment";
+
 import type { CkoClient } from "./http";
 import type { CkoCustomer, CkoMetadata } from "./cko-types";
 
@@ -95,4 +97,30 @@ export async function FindSavedMethod(
     path: `/customers/${customerId}`,
   });
   return ReadSavedMethod(customer.metadata, instrument);
+}
+
+/**
+ * Records the card a hosted page saved for `customer`, once its payment is
+ * known: from `GetCheckoutSession` reading the completed session, or from a
+ * payment webhook, whichever comes first. The payment has already happened, so
+ * a failure is reported rather than thrown, and the next read or delivery
+ * tries again.
+ */
+export async function RememberHostedSave(
+  client: CkoClient,
+  customer: unknown,
+  payment: Payment,
+): Promise<void> {
+  if (typeof customer !== "string" || !payment.paymentMethod) return;
+  if (payment.status === "failed" || payment.status === "canceled") return;
+  await RecordSavedMethod(
+    client,
+    customer,
+    payment.paymentMethod,
+    payment.id,
+  ).catch((error: unknown) => {
+    process.stderr.write(
+      `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${error instanceof Error ? error.message : String(error)})\n`,
+    );
+  });
 }

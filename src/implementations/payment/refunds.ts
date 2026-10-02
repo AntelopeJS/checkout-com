@@ -1,4 +1,7 @@
-import { InvalidPaymentStateError } from "@antelopejs/interface-payment";
+import {
+  InvalidPaymentStateError,
+  PaymentNotFoundError,
+} from "@antelopejs/interface-payment";
 import type {
   Amount,
   Refund,
@@ -13,7 +16,7 @@ import { AssertPaymentId, ParseRefundId } from "./ids";
 import type { CkoActionAccepted, CkoPayment } from "./cko-types";
 import { REFUND_REASON_KEY, ToRefund, WriteMetadata } from "./mapping";
 
-const REFUND_ENTITY = { entity: "refund" as const, forbiddenIsState: true };
+const REFUND_ENTITY = { entity: "payment" as const, forbiddenIsState: true };
 const ALREADY_REFUNDED = 200;
 
 function reasonMetadata(
@@ -88,6 +91,7 @@ export async function GetRefund(
     const action = actions.find(
       (each) => each.id === actionId && each.type === "Refund",
     );
+    if (!action) throw new PaymentNotFoundError(id, "refund");
     return ToRefund(payment, action, actionId);
   });
 }

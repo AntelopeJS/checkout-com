@@ -41,6 +41,10 @@ export interface ErrorContext {
    * void and refund endpoints answer "not allowed" with a bodiless 403.
    */
   forbiddenIsState?: boolean;
+  /** The customer a 422 customer code refers to, when not `id`. */
+  customer?: string;
+  /** The payment method a 422 source code refers to, when not `id`. */
+  method?: string;
 }
 
 const CUSTOMER_ENTITIES = new Set<string>(["customer", "payment method"]);
@@ -52,16 +56,24 @@ function notFound(id: string, entity: string, code?: string): PaymentError {
   return new PaymentNotFoundError(id, entity as PaymentEntity, code);
 }
 
-function fromUnprocessable(error: CkoApiError, id: string): PaymentError {
+function fromUnprocessable(
+  error: CkoApiError,
+  id: string,
+  context: ErrorContext,
+): PaymentError {
   const [code] = error.errorCodes;
   if (error.errorCodes.some((each) => STATE_CODES.has(each))) {
     return new InvalidPaymentStateError(error.message, undefined, code);
   }
   if (error.errorCodes.some((each) => CUSTOMER_CODES.has(each))) {
-    return new CustomerNotFoundError(id, "customer", code);
+    return new CustomerNotFoundError(context.customer ?? id, "customer", code);
   }
   if (error.errorCodes.some((each) => METHOD_CODES.has(each))) {
-    return new CustomerNotFoundError(id, "payment method", code);
+    return new CustomerNotFoundError(
+      context.method ?? id,
+      "payment method",
+      code,
+    );
   }
   return new PaymentError(error.message, code ?? error.errorType);
 }
@@ -116,7 +128,7 @@ export function TranslateError(
     return fromForbidden(error, context);
   }
   if (error.status === UNPROCESSABLE) {
-    return fromUnprocessable(error, id);
+    return fromUnprocessable(error, id, context);
   }
   return new PaymentError(
     error.message,

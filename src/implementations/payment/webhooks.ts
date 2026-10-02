@@ -9,10 +9,12 @@ import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { AssertGenuine } from "./signature";
 import type { CkoEventEnvelope } from "./cko-types";
+import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import {
   AUTOMATIC_CAPTURE,
   CAPTURE_KEY,
+  SAVE_FOR_KEY,
   ToDispute,
   ToEpochMillis,
   ToRefund,
@@ -69,7 +71,13 @@ function isAutomaticApproval(envelope: CkoEventEnvelope): boolean {
 const paymentEvent: EventBuilder = async (account, envelope, type) => {
   if (isAutomaticApproval(envelope)) return undefined;
   const { data } = envelope;
-  return { type, payment: await LoadPayment(account.client, data.id) };
+  const payment = await LoadPayment(account.client, data.id);
+  await RememberHostedSave(
+    account.client,
+    data.metadata?.[SAVE_FOR_KEY],
+    payment,
+  );
+  return { type, payment };
 };
 
 const refundEvent: EventBuilder = (_account, envelope, type) => {

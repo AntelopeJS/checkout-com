@@ -115,6 +115,10 @@ function capture(
   amount: number,
   actionId = NewId("act"),
 ) {
+  const isCapturable =
+    payment.status === "Authorized" &&
+    amount <= payment.balances.available_to_capture;
+  if (!isCapturable) return;
   const remainder = payment.balances.available_to_capture - amount;
   payment.balances.total_captured += amount;
   payment.balances.available_to_capture = 0;

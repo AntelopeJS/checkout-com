@@ -2,16 +2,15 @@ import { PaymentError } from "@antelopejs/interface-payment";
 import type {
   CheckoutSession,
   CheckoutSessionRequest,
-  Payment,
   PaymentStatus,
 } from "@antelopejs/interface-payment";
 
 import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { SessionOnce } from "./session-replays";
-import { RecordSavedMethod } from "./saved-methods";
+import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
-import { AssertHostedPaymentId, IsPaymentId } from "./ids";
+import { AssertCustomerId, AssertHostedPaymentId, IsPaymentId } from "./ids";
 import type {
   CkoCustomer,
   CkoHostedPayment,
@@ -27,6 +26,7 @@ import {
 } from "./mapping";
 
 const SESSION_ENTITY = { entity: "checkout session" as const };
+const CUSTOMER_ENTITY = { entity: "customer" as const };
 const RECEIVED = "Payment Received";
 const MANDATE_CHALLENGE = "challenge_requested_mandate";
 
@@ -87,10 +87,13 @@ async function hostedCustomer(
   customer: string | undefined,
 ): Promise<Record<string, unknown>> {
   if (!customer) return {};
-  const { body } = await account.client.send<CkoCustomer>({
-    method: "GET",
-    path: `/customers/${customer}`,
-  });
+  AssertCustomerId(customer);
+  const { body } = await Translating(customer, CUSTOMER_ENTITY, () =>
+    account.client.send<CkoCustomer>({
+      method: "GET",
+      path: `/customers/${customer}`,
+    }),
+  );
   return {
     customer: { email: body.email, ...(body.name ? { name: body.name } : {}) },
   };
@@ -169,31 +172,6 @@ export async function CreateCheckoutSession(
 }
 
 /**
- * A method saved through the hosted page is recorded the first time the
- * completed session is read, which is when this module first learns which
- * payment stored it. A failure is reported and retried on the next read.
- */
-async function rememberSavedMethod(
-  account: Account,
-  hosted: CkoHostedPayment,
-  payment: Payment,
-): Promise<void> {
-  const customer = hosted.metadata?.[SAVE_FOR_KEY];
-  if (typeof customer !== "string" || !payment.paymentMethod) return;
-  if (payment.status === "failed" || payment.status === "canceled") return;
-  await RecordSavedMethod(
-    account.client,
-    customer,
-    payment.paymentMethod,
-    payment.id,
-  ).catch((error: unknown) => {
-    process.stderr.write(
-      `Checkout.com: session ${hosted.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${error instanceof Error ? error.message : String(error)})\n`,
-    );
-  });
-}
-
-/**
  * While the page is open the payer can still retry, so its own status wins
  * even when a failed attempt has already produced a payment. Once a payment is
  * received, the payment is the better answer: it tells `authorized` from
@@ -207,7 +185,11 @@ async function sessionStatus(
     return STATUS_BY_HOSTED[hosted.status] ?? "pending";
   }
   const payment = await LoadPayment(account.client, hosted.payment_id);
-  await rememberSavedMethod(account, hosted, payment);
+  await RememberHostedSave(
+    account.client,
+    hosted.metadata?.[SAVE_FOR_KEY],
+    payment,
+  );
   return payment.status;
 }
 

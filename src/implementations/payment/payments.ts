@@ -10,10 +10,10 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { AssertPaymentId } from "./ids";
-import type { CkoResponse } from "./http";
+import type { CkoClient, CkoResponse } from "./http";
 import { type Account, GetAccount } from "./accounts";
-import { FollowPayment, LoadPayment } from "./follow";
 import { TranslateError, Translating } from "./errors";
+import { FollowPayment, LoadPayment, ReadPayment } from "./follow";
 import { FindSavedMethod, RecordSavedMethod } from "./saved-methods";
 import type { CkoActionAccepted, CkoMetadata, CkoPayment } from "./cko-types";
 import {
@@ -206,7 +206,11 @@ export async function CreatePayment(
     throw TranslateError(
       error,
       request.customer ?? request.paymentMethod ?? "",
-      { entity: "customer" },
+      {
+        entity: "customer",
+        customer: request.customer,
+        method: request.paymentMethod,
+      },
     );
   }
 }
@@ -238,6 +242,22 @@ function hasLeftAuthorization(payment: CkoPayment): boolean {
   return status !== "authorized" && status !== "pending";
 }
 
+/**
+ * A payment this module asked Checkout.com to capture automatically reads
+ * `pending` until it is captured, and the contract allows a capture only of an
+ * `authorized` one. Refusing on the creation marker rather than on the current
+ * status keeps a replayed capture of an `authorizeOnly` payment answerable.
+ */
+async function assertCapturable(client: CkoClient, id: string): Promise<void> {
+  const payment = await ReadPayment(client, id);
+  if (payment.metadata?.[CAPTURE_KEY] !== AUTOMATIC_CAPTURE) return;
+  throw new InvalidPaymentStateError(
+    "Checkout.com captures this payment by itself; it was not created with authorizeOnly",
+    ToPaymentStatus(payment),
+    "automatic_capture",
+  );
+}
+
 export async function CapturePayment(
   id: string,
   idempotencyKey: string,
@@ -247,6 +267,7 @@ export async function CapturePayment(
   AssertPaymentId(id);
   const { client, settleTimeoutMs } = GetAccount(provider);
   return Translating(id, ACTION_ENTITY, async () => {
+    await assertCapturable(client, id);
     const accepted = await client.send<CkoActionAccepted>({
       method: "POST",
       path: `/payments/${id}/captures`,
