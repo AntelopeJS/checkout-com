@@ -1,0 +1,9 @@
+{
+  "action_id": "act_y3oqhf46pyzuxjbcn2giaqnb44",
+  "reference": "ORD-5023-4E89",
+  "_links": {
+    "payment": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_y3oqhf46pyzuxjbcn2giaqnb44"
+    }
+  }
+}

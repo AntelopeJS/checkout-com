@@ -1,0 +1,13 @@
+{
+  "name": "@antelopejs/checkout-com-renewal-probe",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Calls interface-subscriptions from a module of its own, for the renewal test. Never published.",
+  "main": "index.js",
+  "dependencies": {
+    "@antelopejs/interface-subscriptions": "^0.1.0"
+  },
+  "antelopeJs": {
+    "defaultConfig": {}
+  }
+}

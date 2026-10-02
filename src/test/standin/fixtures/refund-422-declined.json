@@ -1,0 +1,5 @@
+{
+  "request_id": "f5feff3f-d2ef-4c82-b4d0-ff443731581f",
+  "error_type": "processing_error",
+  "error_codes": ["refund_authorization_declined"]
+}

@@ -1,0 +1,176 @@
+{
+  "id": "evt_fkfqht6yonme7bk7jawrgzbbxq",
+  "source": "gwc_notifier1",
+  "type": "payment_captured",
+  "timestamp": "2023-05-24T09:12:32.357+00:00",
+  "version": "1.0.29",
+  "data": {
+    "id": "pay_vti5layihapu5bhbn5tjtk6eem",
+    "action_id": "act_uqlj3642dyyuroivzdwfg2fysq",
+    "reference": "ORD-5023-4E89",
+    "amount": 20,
+    "processed_on": "2023-05-24T09:12:27.4695512Z",
+    "response_code": "10000",
+    "response_summary": "Approved",
+    "balances": {
+      "total_authorized": 20,
+      "total_voided": 0,
+      "available_to_void": 0,
+      "total_captured": 20,
+      "available_to_capture": 0,
+      "total_refunded": 0,
+      "available_to_refund": 20
+    },
+    "metadata": {
+      "coupon_code": "NY2018",
+      "partner_id": "123989"
+    },
+    "currency": "EUR",
+    "processing": {
+      "acquirer_transaction_id": "865749780760868955557",
+      "acquirer_reference_number": "10754814874042406789848"
+    },
+    "event_links": {
+      "payment": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem",
+      "payment_actions": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem/actions",
+      "refund": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem/refunds"
+    },
+    "trigger": "manual"
+  },
+  "action_invocations": [
+    {
+      "workflow_id": "wf_6pyyayaeiwdujjqvks7jmmj76a",
+      "workflow_action_id": "wfa_owmqldtge3kergcgizh2p4hjdq",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_owmqldtge3kergcgizh2p4hjdq"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_6qrz3bzkf5yurkjykc2s4h3bnm",
+      "workflow_action_id": "wfa_wyasbwdp45sudnyd2r63lqt2oy",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_wyasbwdp45sudnyd2r63lqt2oy"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_agw2sr7dbaoubm6cbeurxx4xcu",
+      "workflow_action_id": "wfa_cvpq6va7za4ezjjih3v7hfl3gy",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_cvpq6va7za4ezjjih3v7hfl3gy"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_bmer4kav3cheplt7mo777joiry",
+      "workflow_action_id": "wfa_5jqecauok7pehf42e5ewdykcqq",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_5jqecauok7pehf42e5ewdykcqq"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_ezvclvrrw4pufn4klgu5o2uvmy",
+      "workflow_action_id": "wfa_ujnoococ64pebfd45rwwzrdqpu",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_ujnoococ64pebfd45rwwzrdqpu"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_fjt3ah53hxqulfdypu36c3qecu",
+      "workflow_action_id": "wfa_eduncfueso3uhpwv4k7ef5yxre",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_eduncfueso3uhpwv4k7ef5yxre"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_j2jk2lnqz3oevidruudlqbxwee",
+      "workflow_action_id": "wfa_g5zhonmiuwdujkfuucqanjj7se",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_g5zhonmiuwdujkfuucqanjj7se"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_jmlxvf2zwbxehp5lj4v4f7iynu",
+      "workflow_action_id": "wfa_4dtmwoprzhuerk6hoxmoybimba",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_4dtmwoprzhuerk6hoxmoybimba"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_m7xrd5bevoiedfrupabl7ad6xy",
+      "workflow_action_id": "wfa_duy3xy43gtceldagrsulm5rmle",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_duy3xy43gtceldagrsulm5rmle"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_of3nsslmsvpujabbswmiz5d4wi",
+      "workflow_action_id": "wfa_grfk3ylr7v3e3er6t34jmihcee",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_grfk3ylr7v3e3er6t34jmihcee"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_r2g6yijvifluzbcy5sbwrb4ety",
+      "workflow_action_id": "wfa_h3iftgigyaoudd3pdkrzaa65ci",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_h3iftgigyaoudd3pdkrzaa65ci"
+        }
+      }
+    },
+    {
+      "workflow_id": "wf_sww2en67d7cuvijazu72kqmw5i",
+      "workflow_action_id": "wfa_g6es3cant24uvl4ynur4o52b34",
+      "status": "successful",
+      "_links": {
+        "self": {
+          "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq/actions/wfa_g6es3cant24uvl4ynur4o52b34"
+        }
+      }
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://flow.cko-qa.ckotech.co/workflows/events/evt_fkfqht6yonme7bk7jawrgzbbxq"
+    },
+    "payment_actions": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem/actions"
+    },
+    "payment": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem"
+    },
+    "refund": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_vti5layihapu5bhbn5tjtk6eem/refunds"
+    }
+  }
+}

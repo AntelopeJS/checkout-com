@@ -1,0 +1,14 @@
+{
+  "type": "card",
+  "token": "tok_ubfj2q76miwundwlk72vxt2i7q",
+  "expires_on": "2023-07-11T15:57:32.4350000+00:00",
+  "expiry_month": 6,
+  "expiry_year": 2025,
+  "name": "Bruce Wayne",
+  "scheme": "VISA",
+  "last4": 9996,
+  "bin": 454347,
+  "card_type": "CREDIT",
+  "card_category": "CONSUMER",
+  "issuer": "GOTHAM STATE BANK"
+}

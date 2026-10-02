@@ -1,0 +1,80 @@
+{
+  "id": "pay_mbabizu24mvu3mela5njyhpit4",
+  "action_id": "act_mbabizu24mvu3mela5njyhpit4",
+  "amount": 6540,
+  "currency": "USD",
+  "approved": true,
+  "status": "Authorized",
+  "auth_code": 770687,
+  "response_code": 10000,
+  "response_summary": "Approved",
+  "3ds": {
+    "downgraded": true,
+    "enrolled": "N"
+  },
+  "risk": {
+    "flagged": true
+  },
+  "source": {
+    "type": "card",
+    "id": "src_nwd3m4in3hkuddfpjsaevunhdy",
+    "billing_address": {
+      "address_line1": "123 High St.",
+      "address_line2": "Flat 456",
+      "city": "London",
+      "state": "GB",
+      "zip": "SW1A 1AA",
+      "country": "GB"
+    },
+    "phone": {
+      "country_code": 1,
+      "number": "415 555 2671"
+    },
+    "scheme": "Visa",
+    "last4": 6584,
+    "fingerprint": "B16D9C2EF0C861A8825C9BD59CCE9171D84EBC45E89CC792B5D1D2D0DDE3DAB7",
+    "bin": 448504,
+    "card_type": "CREDIT",
+    "card_category": "COMMERCIAL",
+    "issuer": "GE CAPITAL FINANCIAL, INC.",
+    "issuer_country": "US",
+    "product_type": "PURCHASING",
+    "avs_check": "G",
+    "cvv_check": "Y",
+    "payment_account_reference": "V001898055688657091"
+  },
+  "customer": {
+    "id": "cus_udst2tfldj6upmye2reztkmm4i",
+    "email": "johnsmith@example.com",
+    "name": "John Smith",
+    "phone": {
+      "country_code": 1,
+      "number": "415 555 2671"
+    }
+  },
+  "processed_on": "2019-09-10T10:11:12.0000000+00:00",
+  "reference": "ORD-5023-4E89",
+  "processing": {
+    "retrieval_reference_number": 909913440644,
+    "acquirer_transaction_id": 4.406443090994999e20,
+    "recommendation_code": 2,
+    "partner_order_id": "5GK24544NA744002L",
+    "scheme_merchant_id": 123456
+  },
+  "eci": 6,
+  "scheme_id": 489341065491658,
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4"
+    },
+    "actions": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4/actions"
+    },
+    "void": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4/voids"
+    },
+    "capture": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4/captures"
+    }
+  }
+}

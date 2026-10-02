@@ -1,0 +1,26 @@
+{
+  "id": "pay_aqwuar5sjb5upkupgywyzapfii",
+  "action_id": "act_aqwuar5sjb5upkupgywyzapfii",
+  "currency": "USD",
+  "amount": 100,
+  "approved": false,
+  "status": "Declined",
+  "response_code": "20051",
+  "source": {
+    "type": "card",
+    "expiry_month": 12,
+    "expiry_year": 2030,
+    "last4": "3670",
+    "fingerprint": "F31828E2BDABAE63EB694903825CDD36041CC6ED461440B81415895855502832",
+    "bin": "424242"
+  },
+  "processed_on": "2023-01-17T17:41:52Z",
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_aqwuar5sjb5upkupgywyzapfii"
+    },
+    "actions": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_aqwuar5sjb5upkupgywyzapfii/actions"
+    }
+  }
+}

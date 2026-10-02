@@ -1,0 +1,12 @@
+{
+  "id": "hpp_xGQBg0AXl3cM",
+  "reference": "ORD-123A",
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/hosted-payments/hpp_xGQBg0AXl3cM"
+    },
+    "redirect": {
+      "href": "https://pay.sandbox.checkout.com/page/hpp_xGQBg0AXl3cM"
+    }
+  }
+}

@@ -1,0 +1,98 @@
+import type { CkoClient } from "./http";
+import type { CkoCustomer, CkoMetadata } from "./cko-types";
+
+/**
+ * Checkout.com stores an instrument with no creation time and no link to the
+ * payment that stored it, yet a merchant-initiated charge should name that
+ * payment as `previous_payment_id`. The customer's metadata is the one durable
+ * place at the provider to keep both, one entry per instrument:
+ * `antelope_method_<src_…>` → `<pay_…> <saved at, epoch ms>`.
+ */
+const METHOD_KEY_PREFIX = "antelope_method_";
+const IDEMPOTENCY_KEY = "antelope_idempotency";
+const METADATA_LIMIT = 20;
+const RECORD_SEPARATOR = " ";
+
+export interface SavedMethod {
+  initialPayment: string;
+  savedAt: number;
+}
+
+export function IdempotencyMetadataKey(): string {
+  return IDEMPOTENCY_KEY;
+}
+
+function methodKey(instrument: string): string {
+  return `${METHOD_KEY_PREFIX}${instrument}`;
+}
+
+export function IsInternalCustomerKey(key: string): boolean {
+  return key === IDEMPOTENCY_KEY || key.startsWith(METHOD_KEY_PREFIX);
+}
+
+export function ReadSavedMethod(
+  metadata: CkoMetadata | undefined,
+  instrument: string,
+): SavedMethod | undefined {
+  const raw = metadata?.[methodKey(instrument)];
+  if (typeof raw !== "string") return undefined;
+  const [initialPayment = "", savedAt = ""] = raw.split(RECORD_SEPARATOR);
+  const time = Number(savedAt);
+  return initialPayment && Number.isFinite(time)
+    ? { initialPayment, savedAt: time }
+    : undefined;
+}
+
+function prunedMetadata(customer: CkoCustomer): CkoMetadata {
+  const listed = new Set((customer.instruments ?? []).map(({ id }) => id));
+  const kept = Object.entries(customer.metadata ?? {}).filter(
+    ([key]) =>
+      !key.startsWith(METHOD_KEY_PREFIX) ||
+      listed.has(key.slice(METHOD_KEY_PREFIX.length)),
+  );
+  return Object.fromEntries(kept);
+}
+
+/**
+ * Records the payment that stored an instrument, the first time it is seen.
+ * Returns whether the record is in place afterwards: Checkout.com allows 20
+ * metadata entries per customer, and a customer already at the limit gets no
+ * record, which leaves later charges to Checkout.com's own lookup of the
+ * initial payment.
+ */
+export async function RecordSavedMethod(
+  client: CkoClient,
+  customerId: string,
+  instrument: string,
+  initialPayment: string,
+): Promise<boolean> {
+  const { body: customer } = await client.send<CkoCustomer>({
+    method: "GET",
+    path: `/customers/${customerId}`,
+  });
+  if (ReadSavedMethod(customer.metadata, instrument)) return true;
+  const metadata = {
+    ...prunedMetadata(customer),
+    [methodKey(instrument)]:
+      `${initialPayment}${RECORD_SEPARATOR}${Date.now()}`,
+  };
+  if (Object.keys(metadata).length > METADATA_LIMIT) return false;
+  await client.send({
+    method: "PATCH",
+    path: `/customers/${customerId}`,
+    body: { metadata },
+  });
+  return true;
+}
+
+export async function FindSavedMethod(
+  client: CkoClient,
+  customerId: string,
+  instrument: string,
+): Promise<SavedMethod | undefined> {
+  const { body: customer } = await client.send<CkoCustomer>({
+    method: "GET",
+    path: `/customers/${customerId}`,
+  });
+  return ReadSavedMethod(customer.metadata, instrument);
+}

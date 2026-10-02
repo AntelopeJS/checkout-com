@@ -1,0 +1,25 @@
+{
+  "id": "pay_mbabizu24mvu3mela5njyhpit4",
+  "status": "Pending",
+  "reference": "ORD-5023-4E89",
+  "customer": {
+    "id": "cus_y3oqhf46pyzuxjbcn2giaqnb44",
+    "email": "ali.farid@example.com",
+    "name": "Ali Farid"
+  },
+  "3ds": {
+    "downgraded": false,
+    "enrolled": "Y"
+  },
+  "instruction": {
+    "value_date": "2024-08-25"
+  },
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4"
+    },
+    "redirect": {
+      "href": "https://{prefix}.api.checkout.com/3ds/pay_mbabizu24mvu3mela5njyhpit4"
+    }
+  }
+}

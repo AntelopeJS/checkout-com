@@ -1,0 +1,116 @@
+{
+  "id": "evt_caxmnvuvbe4elkbdx2imwbnjxu",
+  "type": "payment_approved",
+  "version": "1.0.29",
+  "created_on": "2023-05-22T11:56:04.8821546Z",
+  "data": {
+    "id": "pay_griq7wyqkggu7mnk7ecm6ysrl4",
+    "action_id": "act_gl5cpqgccxeulozrvaassd4lta",
+    "reference": "ORD-5023-4E89",
+    "amount": 20,
+    "auth_code": "528709",
+    "currency": "USD",
+    "customer": {
+      "id": "cus_m3cixs4slzcelfjmdcodlgyvkq",
+      "email": "test.449ng7viic@checkout.com"
+    },
+    "payment_ip": "203.0.113.0",
+    "metadata": {
+      "coupon_code": "NY2018",
+      "partner_id": "123989"
+    },
+    "payment_type": "Regular",
+    "processed_on": "2023-05-22T11:56:01.1299682Z",
+    "processing": {
+      "acquirer_transaction_id": "217551732463583666445",
+      "Aft": "False",
+      "retrieval_reference_number": "011307140034",
+      "partner_merchant_advice_code": "24"
+    },
+    "3ds": {
+      "downgraded": false,
+      "enrolled": "Y",
+      "authentication_response": "Y",
+      "cryptogram": "AAABAVIREQAAAAAAAAAAAAAAAAA=",
+      "xid": "347d50f2-c903-4a6a-a3dd-e9b1200f2ac4",
+      "eci": "05",
+      "version": "2.2.0",
+      "exemption": "none",
+      "challenged": false
+    },
+    "cko_network_token_available": true,
+    "pan_type_processed": "fpan",
+    "response_code": "10000",
+    "response_summary": "Approved",
+    "risk": {
+      "flagged": false,
+      "score": 0
+    },
+    "scheme_id": "881919475944678",
+    "eci": "05",
+    "source": {
+      "id": "src_r54q37yundoubpkiux5g4ocuha",
+      "type": "card",
+      "card_wallet_type": "applepay",
+      "billing_address": {
+        "line1": "123 High St.",
+        "line2": "Flat 456",
+        "town_city": "London",
+        "state": "Greater London",
+        "zip": "SW1A 1AA",
+        "country": "UK"
+      },
+      "expiry_month": 6,
+      "expiry_year": 2025,
+      "name": "Chakram Visa Customer",
+      "scheme": "VISA",
+      "last_4": "6635",
+      "fingerprint": "E4AEAAB4AC2F55761E20D5DEDEA3B5AD6DFD5511CEFDA8A922AB78DBF5F8E0AC",
+      "bin": "464859",
+      "card_type": "CREDIT",
+      "card_category": "CONSUMER",
+      "issuer": "BARCLAYS BANK",
+      "issuer_country": "GB",
+      "product_id": "F",
+      "product_type": "Visa Classic",
+      "avs_check": "G",
+      "cvv_check": "Y",
+      "payment_account_reference_number": "V0010013022456589000040720006"
+    },
+    "balances": {
+      "total_authorized": 20,
+      "total_voided": 0,
+      "available_to_void": 20,
+      "total_captured": 0,
+      "available_to_capture": 20,
+      "total_refunded": 0,
+      "available_to_refund": 0
+    },
+    "event_links": {
+      "payment": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4",
+      "payment_actions": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/actions",
+      "capture": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/captures",
+      "void": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/voids"
+    }
+  },
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.checkout.com/workflows/events/evt_caxmnvuvbe4elkbdx2imwbnjxu"
+    },
+    "subject": {
+      "href": "https://{prefix}.api.checkout.com/workflows/events/subject/pay_griq7wyqkggu7mnk7ecm6ysrl4"
+    },
+    "payment": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4"
+    },
+    "payment_actions": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/actions"
+    },
+    "capture": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/captures"
+    },
+    "void": {
+      "href": "https://{prefix}.api.checkout.com/payments/pay_griq7wyqkggu7mnk7ecm6ysrl4/voids"
+    }
+  }
+}

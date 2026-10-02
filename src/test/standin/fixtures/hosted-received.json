@@ -1,0 +1,48 @@
+{
+  "id": "hpp_xGQBg0AXl3cM",
+  "status": "Payment Received",
+  "payment_id": "pay_mbabizu24mvu3mela5njyhpit4",
+  "amount": 200,
+  "currency": "GBP",
+  "reference": "ORD-123A",
+  "description": "Payment for Gold Necklace",
+  "expires_on": "2021-08-20T20:25:28+08:00",
+  "customer": {
+    "name": "John Smith",
+    "email": "john.smith@example.com"
+  },
+  "billing": {
+    "address": {
+      "address_line1": "123 High St.",
+      "address_line2": "Flat 456",
+      "city": "London",
+      "zip": "SW1A 1AA",
+      "country": "GB"
+    },
+    "phone": {
+      "country_code": "+44",
+      "number": "1234567890"
+    }
+  },
+  "products": [
+    {
+      "name": "Gold Necklace",
+      "quantity": 1,
+      "price": 200
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/hosted-payments/hpp_xGQBg0AXl3cM"
+    },
+    "redirect": {
+      "href": "https://pay.sandbox.checkout.com/page/hpp_xGQBg0AXl3cM"
+    },
+    "payment": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4"
+    },
+    "payment_actions": {
+      "href": "https://{prefix}.api.sandbox.checkout.com/payments/pay_mbabizu24mvu3mela5njyhpit4/actions"
+    }
+  }
+}

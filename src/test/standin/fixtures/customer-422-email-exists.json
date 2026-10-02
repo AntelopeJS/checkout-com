@@ -1,0 +1,5 @@
+{
+  "request_id": "0HL80RJLS76I7",
+  "error_type": "request_invalid",
+  "error_codes": ["customer_email_already_exists"]
+}

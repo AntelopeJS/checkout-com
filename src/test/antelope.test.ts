@@ -1,0 +1,148 @@
+import path from "node:path";
+import { MongoMemoryServer } from "mongodb-memory-server-core";
+import { defineConfig } from "@antelopejs/interface-core/config";
+
+import { DefaultBaseUrl } from "../config";
+import { MintInstrument, type Target } from "./mint";
+import { PrepareFallbackModule } from "./fallback-module";
+import { type LiveEnvironment, ResolveEnvironment } from "./environment";
+import {
+  RegisterStandIn,
+  STAND_IN_PROCESSING_CHANNEL,
+  STAND_IN_PUBLIC_KEY,
+  STAND_IN_SECRET_KEY,
+  StandIn,
+} from "./standin";
+import {
+  SECONDARY_WEBHOOK_AUTHORIZATION,
+  SECONDARY_WEBHOOK_KEY,
+  TEST_BILLING_COUNTRY,
+  TEST_CARDS,
+  TEST_WEBHOOK_KEY,
+} from "./constants";
+
+const MONGO_VERSION = "8.0.8";
+const TEST_POLL_MS = 100;
+const MODULE_ROOT = path.resolve(__dirname, "../..");
+
+let standIn: StandIn | undefined;
+let mongod: MongoMemoryServer | undefined;
+
+function liveTarget(environment: LiveEnvironment): Target {
+  return {
+    baseUrl: environment.baseUrl ?? DefaultBaseUrl(environment.secretKey),
+    secretKey: environment.secretKey,
+    processingChannelId: environment.processingChannelId,
+    ...(process.env.CKO_PUBLIC_KEY
+      ? { publicKey: process.env.CKO_PUBLIC_KEY }
+      : {}),
+  };
+}
+
+async function standInTarget(): Promise<Target> {
+  standIn = new StandIn();
+  const baseUrl = await standIn.start();
+  RegisterStandIn(standIn);
+  return {
+    baseUrl,
+    secretKey: STAND_IN_SECRET_KEY,
+    publicKey: STAND_IN_PUBLIC_KEY,
+    processingChannelId: STAND_IN_PROCESSING_CHANNEL,
+  };
+}
+
+/**
+ * The conformance suite's charge tests need reusable methods, which only
+ * exist once a card has been tokenized with the public key. Without one the
+ * suite skips them, exactly as it does for any provider with no test method.
+ */
+async function mintTestMethods(target: Target): Promise<void> {
+  if (!target.publicKey) return;
+  process.env.ANTELOPE_PAYMENT_TEST_METHOD = await MintInstrument(
+    target,
+    TEST_CARDS.approved,
+  );
+  process.env.ANTELOPE_PAYMENT_TEST_METHOD_DECLINED = await MintInstrument(
+    target,
+    TEST_CARDS.insufficientFunds,
+  );
+}
+
+function accountConfig(target: Target): Record<string, unknown> {
+  const account = {
+    secretKey: target.secretKey,
+    processingChannelId: target.processingChannelId,
+    baseUrl: target.baseUrl,
+  };
+  return {
+    ...account,
+    webhookSignatureKey: TEST_WEBHOOK_KEY,
+    checkoutBillingCountry: TEST_BILLING_COUNTRY,
+    accounts: {
+      secondary: {
+        ...account,
+        webhookSignatureKey: SECONDARY_WEBHOOK_KEY,
+        webhookAuthorization: SECONDARY_WEBHOOK_AUTHORIZATION,
+        merchantInitiatedType: "Unscheduled",
+      },
+    },
+  };
+}
+
+function exposeTarget(target: Target, mode: string): void {
+  Object.assign(process.env, {
+    ANTELOPE_PAYMENT_TEST_CURRENCY: "EUR",
+    CKO_TEST_MODE: mode,
+    CKO_TEST_BASE_URL: target.baseUrl,
+    CKO_TEST_SECRET_KEY: target.secretKey,
+    CKO_TEST_PUBLIC_KEY: target.publicKey ?? "",
+    CKO_TEST_PROCESSING_CHANNEL_ID: target.processingChannelId,
+  });
+}
+
+function fallbackModules(mongoUrl: string): Record<string, unknown> {
+  return {
+    mongodb: {
+      source: { type: "local", path: "node_modules/@antelopejs/mongodb" },
+      config: { url: mongoUrl, database: "checkout_com_test" },
+    },
+    subscriptions: {
+      source: { type: "local", path: PrepareFallbackModule(MODULE_ROOT) },
+      config: { pollIntervalMs: TEST_POLL_MS, sweepIntervalMs: TEST_POLL_MS },
+    },
+    probe: { source: { type: "local", path: "test/renewal-probe" } },
+  };
+}
+
+export default defineConfig({
+  name: "checkout-com-test",
+  cacheFolder: ".antelope/cache",
+  modules: {
+    local: { source: { type: "local", path: "." } },
+  },
+  test: {
+    folder: "dist/test",
+    async setup() {
+      const environment = ResolveEnvironment(process.env);
+      const target =
+        environment.mode === "live"
+          ? liveTarget(environment)
+          : await standInTarget();
+      exposeTarget(target, environment.mode);
+      await mintTestMethods(target);
+      mongod = await MongoMemoryServer.create({
+        binary: { version: MONGO_VERSION },
+      });
+      return {
+        modules: {
+          local: { config: accountConfig(target) },
+          ...fallbackModules(mongod.getUri()),
+        },
+      };
+    },
+    async cleanup() {
+      await standIn?.stop();
+      await mongod?.stop();
+    },
+  },
+});
