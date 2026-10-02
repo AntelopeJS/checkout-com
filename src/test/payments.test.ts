@@ -258,6 +258,9 @@ describe("[checkout-com] refunds", function () {
       payment.amount.value,
       "no amount refunds the rest",
     );
+    if (!IsLive()) {
+      assert.equal(refund.status, "pending", "accepted, not yet processed");
+    }
     const settled = await WaitFor(
       () => GetRefund(refund.id),
       ({ status }) => status === "succeeded",
