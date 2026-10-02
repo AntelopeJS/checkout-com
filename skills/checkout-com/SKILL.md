@@ -42,6 +42,8 @@ Checkout.com has no subscription resource.
 - `CreateCheckoutSession` replays are recognised in-process only.
 - A payment captured automatically reads `pending` until Checkout.com has
   captured it; `authorized` means an `authorizeOnly` hold.
+  `CapturePayment` refuses anything but an `authorizeOnly` payment
+  (`automatic_capture`), and a 3DS-pending payment cannot be cancelled.
 - `GetPayment` on a payment waiting for 3DS reads `pending`, without
   `redirectUrl`: only `CreatePayment` sees the redirect.
 - Refunds come back `pending`; the webhook settles them. Refund ids are
