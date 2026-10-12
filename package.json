@@ -43,7 +43,7 @@
     "@antelopejs/interface-database": "^0.1.8",
     "@antelopejs/interface-subscriptions": "^0.1.0",
     "@antelopejs/mongodb": "^1.4.0",
-    "@antelopejs/tooling-configs": "^0.0.4",
+    "@antelopejs/tooling-configs": "^0.0.8",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.15",
     "eslint-plugin-perfectionist": "^5.11.0",
