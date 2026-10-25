@@ -5,7 +5,7 @@
   "description": "Calls interface-subscriptions from a module of its own, for the renewal test. Never published.",
   "main": "index.js",
   "dependencies": {
-    "@antelopejs/interface-subscriptions": "^0.1.0"
+    "@antelopejs/interface-subscriptions": ">=0.0.2 <0.1.0"
   },
   "antelopeJs": {
     "defaultConfig": {}

@@ -6,5 +6,4 @@ export default antelopeKnipConfig({
     "src/test/antelope.test.ts",
     "test/renewal-probe/index.js",
   ],
-  ignoreBinaries: ["ajs"],
 });
