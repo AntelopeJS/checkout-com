@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@antelopejs/interface-payment': git+ssh://git@github.com/AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f
-  '@antelopejs/interface-subscriptions': git+ssh://git@github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c
+  '@antelopejs/interface-payment': git+https://github.com/AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f
+  '@antelopejs/interface-subscriptions': git+https://github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c
 
 importers:
 
@@ -16,15 +16,15 @@ importers:
         specifier: '>=0.0.5 <1.0.0'
         version: 0.1.1
       '@antelopejs/interface-payment':
-        specifier: git+ssh://git@github.com/AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f
-        version: git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)
+        specifier: git+https://github.com/AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f
+        version: https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)
     devDependencies:
       '@antelopejs/interface-database':
         specifier: ^0.1.8
         version: 0.1.8(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-subscriptions':
-        specifier: git+ssh://git@github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c
-        version: git+https://git@github.com:AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1))
+        specifier: git+https://github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c
+        version: https://codeload.github.com/AntelopeJS/interface-subscriptions/tar.gz/481ede61b57cab94d82c9dd301a92935398cf01c(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1))
       '@antelopejs/mongodb':
         specifier: ^1.4.0
         version: 1.4.0(socks@2.8.10)
@@ -81,14 +81,14 @@ packages:
   '@antelopejs/interface-mongodb@0.0.5':
     resolution: {integrity: sha512-2cNS8p/A0lTfXOb1T9stihbSQasUyZPbJPkAtACHL61eYZ+YDayo93nmS4kPp/UicRGNRWqGAvknx41NUOW1nA==}
 
-  '@antelopejs/interface-payment@git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f':
-    resolution: {commit: 9d80f653258e23a820a93bb36b1fa1c8cbc8332f, repo: git@github.com:AntelopeJS/interface-payment.git, type: git}
+  '@antelopejs/interface-payment@https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f':
+    resolution: {tarball: https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f}
     version: 0.1.0
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.3 <1.0.0'
 
-  '@antelopejs/interface-subscriptions@git+https://git@github.com:AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c':
-    resolution: {commit: 481ede61b57cab94d82c9dd301a92935398cf01c, repo: git@github.com:AntelopeJS/interface-subscriptions.git, type: git}
+  '@antelopejs/interface-subscriptions@https://codeload.github.com/AntelopeJS/interface-subscriptions/tar.gz/481ede61b57cab94d82c9dd301a92935398cf01c':
+    resolution: {tarball: https://codeload.github.com/AntelopeJS/interface-subscriptions/tar.gz/481ede61b57cab94d82c9dd301a92935398cf01c}
     version: 0.1.0
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.5 <1.0.0'
@@ -2305,14 +2305,14 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/interface-payment@git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)':
+  '@antelopejs/interface-payment@https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
 
-  '@antelopejs/interface-subscriptions@git+https://git@github.com:AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1))':
+  '@antelopejs/interface-subscriptions@https://codeload.github.com/AntelopeJS/interface-subscriptions/tar.gz/481ede61b57cab94d82c9dd301a92935398cf01c(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1))':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
-      '@antelopejs/interface-payment': git+https://git@github.com:AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)
+      '@antelopejs/interface-payment': https://codeload.github.com/AntelopeJS/interface-payment/tar.gz/9d80f653258e23a820a93bb36b1fa1c8cbc8332f(@antelopejs/interface-core@0.1.1)
 
   '@antelopejs/mongodb@1.4.0(socks@2.8.10)':
     dependencies:

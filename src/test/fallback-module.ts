@@ -2,10 +2,10 @@ import path from "node:path";
 import { existsSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const REMOTE = "git@github.com:AntelopeJS/payment-subscriptions.git";
+const REMOTE = "https://github.com/AntelopeJS/payment-subscriptions.git";
 const COMMIT = "bdb266c55481ac03d0a794b3ff63a88486197c49";
 const INTERFACE_SUBSCRIPTIONS_PIN =
-  "git+ssh://git@github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c";
+  "git+https://github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c";
 const FOLDER = `.antelope/payment-subscriptions-${COMMIT.slice(0, 7)}`;
 const BUILT_ENTRY = "dist/index.js";
 const OWN_DEPENDENCIES = "node_modules";
