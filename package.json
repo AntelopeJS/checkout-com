@@ -37,11 +37,11 @@
   },
   "dependencies": {
     "@antelopejs/interface-core": ">=0.0.5 <1.0.0",
-    "@antelopejs/interface-payment": "^0.1.0"
+    "@antelopejs/interface-payment": ">=0.0.2 <0.1.0"
   },
   "devDependencies": {
     "@antelopejs/interface-database": "^0.1.8",
-    "@antelopejs/interface-subscriptions": "^0.1.0",
+    "@antelopejs/interface-subscriptions": ">=0.0.2 <0.1.0",
     "@antelopejs/mongodb": "^1.4.0",
     "@antelopejs/tooling-configs": "^0.0.8",
     "@types/mocha": "^10.0.10",
@@ -58,12 +58,6 @@
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.6.5",
-  "pnpm": {
-    "overrides": {
-      "@antelopejs/interface-payment": "git+https://github.com/AntelopeJS/interface-payment.git#9d80f653258e23a820a93bb36b1fa1c8cbc8332f",
-      "@antelopejs/interface-subscriptions": "git+https://github.com/AntelopeJS/interface-subscriptions.git#481ede61b57cab94d82c9dd301a92935398cf01c"
-    }
-  },
   "antelopeJs": {
     "implements": [
       "@antelopejs/interface-payment"
