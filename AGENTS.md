@@ -17,9 +17,9 @@ The AntelopeJS module that implements `@antelopejs/interface-payment` on Checkou
 ## Tests
 
 - `pnpm test` builds `dist` once, then runs `ajs module test .` (the `ajs` CLI comes from the `@antelopejs/core` devDependency). The setup starts the stand-in and an in-memory MongoDB 8.0.8, and clones and builds `payment-subscriptions` under `.antelope/` on first run, so the first run needs network access.
-- Without `CKO_SECRET_KEY` and `CKO_PROCESSING_CHANNEL_ID`, the suites run against the stand-in. This is what `pnpm run checks` and CI run.
-- `pnpm run checks` does not run the live suite against Checkout.com's sandbox. Run it with `CKO_SECRET_KEY=sk_sbox_… CKO_PROCESSING_CHANNEL_ID=pc_… pnpm test`, adding `CKO_BASE_URL` and `CKO_PUBLIC_KEY` as `docs/5.testing.md` describes. A production key is refused. Live, the stand-in-only tests are skipped.
-- Two conformance tests are skipped by name in every run; `src/test/exclusions.test.ts` replaces each with a test of the same flow.
+- Without `CKO_SECRET_KEY` and `CKO_PROCESSING_CHANNEL_ID`, the suites run against the stand-in. CI sets neither, so it runs the stand-in.
+- CI never runs the live suite against Checkout.com's sandbox, and `pnpm run checks` runs it only if both keys are exported. Run it with `CKO_SECRET_KEY=sk_sbox_… CKO_PROCESSING_CHANNEL_ID=pc_… pnpm test`, adding `CKO_BASE_URL` and `CKO_PUBLIC_KEY` as `docs/5.testing.md` describes. A production key is refused. Live, the stand-in-only tests are skipped.
+- `src/test/exclusions.test.ts` skips two conformance tests by name in every run; `customers.test.ts` and `saved-methods.test.ts` cover the same flows.
 
 <!-- antelopejs-guardrails:start -->
 <!-- Managed by @antelopejs/tooling-configs. `antelopejs-sync` rewrites everything between these markers; write repository-specific guidance outside them. -->
