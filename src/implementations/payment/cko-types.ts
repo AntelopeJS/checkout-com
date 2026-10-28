@@ -1,3 +1,12 @@
+/** A value as JSON carries it. */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 type CkoScalar = string | number | boolean;
 
 export type CkoMetadata = Record<string, CkoScalar>;
@@ -155,3 +164,78 @@ interface CkoEventData
   extends
     CkoPaymentEventData,
     Omit<CkoDisputeEventData, "amount" | "currency"> {}
+
+/** How a `POST /payments` request names the method to charge. */
+export type CkoPaymentSource =
+  | { type: "id"; id: string }
+  | { type: "token"; token: string; store_for_future_use: boolean };
+
+/** The 3DS settings of a request that takes a mandate from the payer. */
+interface CkoThreeDs {
+  enabled: boolean;
+  challenge_indicator: string;
+}
+
+/** How a `POST /payments` request declares the payer's presence. */
+export interface CkoInitiation {
+  merchant_initiated?: boolean;
+  payment_type?: string;
+  previous_payment_id?: string;
+  "3ds"?: CkoThreeDs;
+}
+
+/** The body of `POST /payments`. */
+export interface CkoPaymentRequest extends CkoInitiation {
+  source: CkoPaymentSource;
+  amount: number;
+  currency: string;
+  reference: string;
+  capture: boolean;
+  processing_channel_id: string;
+  metadata: CkoMetadata;
+  description?: string;
+  customer?: { id: string };
+  success_url?: string;
+  failure_url?: string;
+}
+
+/** The payer a hosted payment page is opened for. */
+export interface CkoHostedCustomer {
+  email?: string;
+  name?: string;
+}
+
+/** The body of `POST /hosted-payments`. */
+export interface CkoHostedPaymentRequest {
+  amount: number;
+  currency: string;
+  reference: string;
+  billing: { address: { country: string } };
+  success_url: string;
+  cancel_url: string;
+  failure_url: string;
+  capture: boolean;
+  processing_channel_id: string;
+  metadata: CkoMetadata;
+  description?: string;
+  locale?: string;
+  customer?: CkoHostedCustomer;
+  payment_type?: string;
+  payment_method_configuration?: {
+    card: { store_payment_details: string };
+  };
+  "3ds"?: CkoThreeDs;
+}
+
+/** The body of `POST /customers`. */
+export interface CkoCustomerRequest {
+  email: string;
+  metadata: CkoMetadata;
+  name?: string;
+}
+
+/** The body of `POST /payments/{id}/refunds`. */
+export interface CkoRefundRequest {
+  metadata: CkoMetadata;
+  amount?: number;
+}

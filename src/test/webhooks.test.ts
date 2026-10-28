@@ -27,17 +27,22 @@ import {
   TEST_WEBHOOK_KEY,
 } from "./constants";
 
-type Envelope = Record<string, unknown> & { data: Record<string, unknown> };
+interface DeliveryData {
+  id?: string;
+  action_id?: string;
+  amount?: number;
+  currency?: string;
+  metadata?: Record<string, string>;
+}
 
 const EPOCH_MILLIS_FLOOR = Date.UTC(2020, 0, 1);
 
-function delivery(
-  fixture: unknown,
-  data: Record<string, unknown>,
+function delivery<Fixture extends { data: object }>(
+  fixture: Fixture,
+  data: DeliveryData,
   signatureKey = TEST_WEBHOOK_KEY,
 ): WebhookRequest {
-  const envelope = structuredClone(fixture) as Envelope;
-  envelope.data = { ...envelope.data, ...data };
+  const envelope = { ...fixture, data: { ...fixture.data, ...data } };
   const body = JSON.stringify(envelope);
   return {
     body: Buffer.from(body),
@@ -51,12 +56,12 @@ function delivery(
 function assertEvent(
   event: PaymentEvent | undefined,
   type: string,
-  fixture: unknown,
+  fixture: { id: string },
 ): PaymentEvent {
   assert.ok(event, `a ${type} delivery must produce an event`);
   assert.equal(event.type, type);
   assert.ok(PAYMENT_EVENT_TYPES.includes(event.type));
-  assert.equal(event.id, (fixture as Envelope).id);
+  assert.equal(event.id, fixture.id);
   assert.ok(
     event.createdAt > EPOCH_MILLIS_FLOOR,
     "createdAt must be epoch milliseconds",
@@ -79,10 +84,7 @@ describe("[checkout-com] webhook normalisation", function () {
     assert.equal(event.payment?.id, payment.id);
     assert.equal(event.payment?.status, "succeeded");
     assert.equal(event.payment?.amountCaptured.value, payment.amount.value);
-    assert.equal(
-      event.createdAt,
-      Date.parse((capturedFixture as Envelope).timestamp as string),
-    );
+    assert.equal(event.createdAt, Date.parse(capturedFixture.timestamp));
   });
 
   it("reports an approval it must act on as payment.authorized", async function () {
@@ -98,10 +100,7 @@ describe("[checkout-com] webhook normalisation", function () {
       approvedFixture,
     );
     assert.equal(event.payment?.status, "authorized");
-    assert.equal(
-      event.createdAt,
-      Date.parse((approvedFixture as Envelope).created_on as string),
-    );
+    assert.equal(event.createdAt, Date.parse(approvedFixture.created_on));
   });
 
   it("stays silent on an approval Checkout.com will capture by itself", async function () {
@@ -184,7 +183,7 @@ describe("[checkout-com] webhook normalisation from the body alone", function ()
       "dispute.opened",
       disputeFixture,
     );
-    const data = (disputeFixture as Envelope).data;
+    const { data } = disputeFixture;
     assert.equal(event.dispute?.id, data.id);
     assert.equal(event.dispute?.payment, data.payment_id);
     assert.deepEqual(event.dispute?.amount, {
@@ -192,7 +191,7 @@ describe("[checkout-com] webhook normalisation from the body alone", function ()
       currency: data.currency,
     });
     assert.equal(event.dispute?.reason, data.category);
-    assert.equal(event.dispute?.createdAt, Date.parse(data.date as string));
+    assert.equal(event.dispute?.createdAt, Date.parse(data.date));
   });
 
   it("resolves undefined for a genuine delivery it does not model", async () => {
@@ -301,7 +300,7 @@ describe("[checkout-com] webhook verification", () => {
     const raw = "not json";
     const error = await VerifyWebhook(
       request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
-    ).catch((caught: unknown) => caught);
+    ).catch((cause: unknown) => cause);
     assert.ok(error instanceof PaymentError);
     assert.equal(error instanceof WebhookVerificationError, false);
   });

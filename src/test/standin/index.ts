@@ -73,10 +73,12 @@ export class StandIn {
 type Registry = Record<symbol, StandIn | undefined>;
 
 export function RegisterStandIn(standIn: StandIn | undefined): void {
-  (globalThis as typeof globalThis & Registry)[REGISTRY] = standIn;
+  const registry: Registry = globalThis;
+  registry[REGISTRY] = standIn;
 }
 
 /** The stand-in the suite runs against, or undefined when it runs live. */
 export function CurrentStandIn(): StandIn | undefined {
-  return (globalThis as typeof globalThis & Registry)[REGISTRY];
+  const registry: Registry = globalThis;
+  return registry[REGISTRY];
 }

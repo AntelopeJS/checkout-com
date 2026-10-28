@@ -11,14 +11,18 @@ import { SessionOnce } from "./session-replays";
 import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import { AssertCustomerId, AssertHostedPaymentId, IsPaymentId } from "./ids";
+import { LookUp } from "./lookup";
 import type {
   CkoCustomer,
+  CkoHostedCustomer,
   CkoHostedPayment,
   CkoHostedPaymentCreated,
+  CkoHostedPaymentRequest,
 } from "./cko-types";
 import {
   AUTOMATIC_CAPTURE,
   CAPTURE_KEY,
+  type InternalMetadata,
   MANUAL_CAPTURE,
   SAVE_FOR_KEY,
   ToEpochMillis,
@@ -30,10 +34,10 @@ const CUSTOMER_ENTITY = { entity: "customer" as const };
 const RECEIVED = "Payment Received";
 const MANDATE_CHALLENGE = "challenge_requested_mandate";
 
-const STATUS_BY_HOSTED: Record<string, PaymentStatus> = {
+const STATUS_BY_HOSTED = {
   Expired: "canceled",
   "Payment Pending": "pending",
-};
+} satisfies Record<string, PaymentStatus>;
 
 const HOSTED_LOCALES = [
   "ar",
@@ -66,11 +70,10 @@ const LOCALE_BY_TAG: Record<string, string> = Object.fromEntries([
   ...HOSTED_LOCALES.map((locale) => [locale.toLowerCase(), locale]),
 ]);
 
-function hostedLocale(locale: string | undefined): Record<string, string> {
-  if (!locale) return {};
+function hostedLocale(locale: string | undefined): string | undefined {
+  if (!locale) return undefined;
   const lowered = locale.toLowerCase();
-  const match = LOCALE_BY_TAG[lowered] ?? LOCALE_BY_TAG[lowered.split("-")[0]];
-  return match ? { locale: match } : {};
+  return LOCALE_BY_TAG[lowered] ?? LOCALE_BY_TAG[lowered.split("-")[0]];
 }
 
 function billingCountry(account: Account): string {
@@ -85,8 +88,8 @@ function billingCountry(account: Account): string {
 async function hostedCustomer(
   account: Account,
   customer: string | undefined,
-): Promise<Record<string, unknown>> {
-  if (!customer) return {};
+): Promise<CkoHostedCustomer | undefined> {
+  if (!customer) return undefined;
   AssertCustomerId(customer);
   const { body } = await Translating(customer, CUSTOMER_ENTITY, () =>
     account.client.send<CkoCustomer>({
@@ -94,15 +97,20 @@ async function hostedCustomer(
       path: `/customers/${customer}`,
     }),
   );
-  return {
-    customer: { email: body.email, ...(body.name ? { name: body.name } : {}) },
-  };
+  const payer: CkoHostedCustomer = { email: body.email };
+  if (body.name) {
+    payer.name = body.name;
+  }
+  return payer;
 }
 
 function saving(
   account: Account,
   request: CheckoutSessionRequest,
-): Record<string, unknown> {
+): Pick<
+  CkoHostedPaymentRequest,
+  "payment_type" | "payment_method_configuration" | "3ds"
+> {
   if (!request.savePaymentMethod) return {};
   return {
     payment_type:
@@ -114,11 +122,21 @@ function saving(
   };
 }
 
+function internalMetadata(request: CheckoutSessionRequest): InternalMetadata {
+  const internal: InternalMetadata = {
+    [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
+  };
+  if (request.savePaymentMethod && request.customer) {
+    internal[SAVE_FOR_KEY] = request.customer;
+  }
+  return internal;
+}
+
 async function buildRequest(
   account: Account,
   request: CheckoutSessionRequest,
-): Promise<Record<string, unknown>> {
-  return {
+): Promise<CkoHostedPaymentRequest> {
+  const sent: CkoHostedPaymentRequest = {
     amount: request.amount.value,
     currency: request.amount.currency.toUpperCase(),
     reference: request.reference,
@@ -128,17 +146,20 @@ async function buildRequest(
     failure_url: request.cancelUrl,
     capture: !request.authorizeOnly,
     processing_channel_id: account.processingChannelId,
-    metadata: WriteMetadata(request.metadata, {
-      [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
-      ...(request.savePaymentMethod && request.customer
-        ? { [SAVE_FOR_KEY]: request.customer }
-        : {}),
-    }),
-    ...(request.description ? { description: request.description } : {}),
-    ...hostedLocale(request.locale),
-    ...(await hostedCustomer(account, request.customer)),
-    ...saving(account, request),
+    metadata: WriteMetadata(request.metadata, internalMetadata(request)),
   };
+  if (request.description) {
+    sent.description = request.description;
+  }
+  const locale = hostedLocale(request.locale);
+  if (locale) {
+    sent.locale = locale;
+  }
+  const payer = await hostedCustomer(account, request.customer);
+  if (payer) {
+    sent.customer = payer;
+  }
+  return { ...sent, ...saving(account, request) };
 }
 
 /**
@@ -182,7 +203,7 @@ async function sessionStatus(
   hosted: CkoHostedPayment,
 ): Promise<PaymentStatus> {
   if (hosted.status !== RECEIVED || !IsPaymentId(hosted.payment_id)) {
-    return STATUS_BY_HOSTED[hosted.status] ?? "pending";
+    return LookUp(STATUS_BY_HOSTED, hosted.status) ?? "pending";
   }
   const payment = await LoadPayment(account.client, hosted.payment_id);
   await RememberHostedSave(
@@ -204,12 +225,17 @@ export async function GetCheckoutSession(
       method: "GET",
       path: `/hosted-payments/${id}`,
     });
-    return {
+    const session: CheckoutSession = {
       id: body.id,
       redirectUrl: body._links.redirect?.href ?? "",
       status: await sessionStatus(account, body),
-      ...(IsPaymentId(body.payment_id) ? { payment: body.payment_id } : {}),
-      ...(body.expires_on ? { expiresAt: ToEpochMillis(body.expires_on) } : {}),
     };
+    if (IsPaymentId(body.payment_id)) {
+      session.payment = body.payment_id;
+    }
+    if (body.expires_on) {
+      session.expiresAt = ToEpochMillis(body.expires_on);
+    }
+    return session;
   });
 }

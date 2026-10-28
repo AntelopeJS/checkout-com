@@ -11,7 +11,9 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { TEST_CARDS } from "./constants";
+import { isPaymentDetails } from "./raw";
 import { CurrentStandIn } from "./standin";
+import { type JsonObject, ObjectOf } from "./standin/wire";
 import {
   CardToken,
   Charge,
@@ -30,11 +32,7 @@ const EUR = { value: 2500, currency: "EUR" };
 const RETURN_URL = "https://merchant.invalid/return";
 const REFUND_DECLINED_AMOUNT = 3738;
 
-interface PaymentDetailsView {
-  payment_type?: string;
-}
-
-function lastPaymentRequest(): Record<string, unknown> {
+function lastPaymentRequest(): JsonObject {
   const calls = CurrentStandIn()?.calls ?? [];
   const call = calls
     .filter((each) => each.method === "POST" && each.path === "/payments")
@@ -78,10 +76,7 @@ describe("[checkout-com] how payments are declared to the schemes", function () 
       enabled: true,
       challenge_indicator: "challenge_requested_mandate",
     });
-    assert.equal(
-      (sent.source as Record<string, unknown>).store_for_future_use,
-      true,
-    );
+    assert.equal(ObjectOf(sent.source)?.store_for_future_use, true);
   });
 
   it("charges a saved card as a merchant-initiated payment chained to the one that saved it", async function () {
@@ -98,7 +93,7 @@ describe("[checkout-com] how payments are declared to the schemes", function () 
       key(),
     );
     assert.notEqual(charge.status, "requires_action");
-    const raw = await ReadRaw<PaymentDetailsView>(`/payments/${charge.id}`);
+    const raw = await ReadRaw(`/payments/${charge.id}`, isPaymentDetails);
     assert.equal(raw.payment_type, "Recurring");
     if (!CurrentStandIn()) return;
     const sent = lastPaymentRequest();
@@ -121,7 +116,7 @@ describe("[checkout-com] how payments are declared to the schemes", function () 
       key(),
       "secondary",
     );
-    const raw = await ReadRaw<PaymentDetailsView>(`/payments/${charge.id}`);
+    const raw = await ReadRaw(`/payments/${charge.id}`, isPaymentDetails);
     assert.equal(raw.payment_type, "Unscheduled");
   });
 
@@ -221,7 +216,7 @@ describe("[checkout-com] refusals before and at Checkout.com", function () {
         offSession: true,
       },
       key(),
-    ).catch((caught: unknown) => caught);
+    ).catch((cause: unknown) => cause);
     assert.ok(error instanceof PaymentError);
     assert.equal(error.providerCode, "amount_invalid");
   });
@@ -279,7 +274,7 @@ describe("[checkout-com] refunds", function () {
         amount: { value: REFUND_DECLINED_AMOUNT, currency: "EUR" },
       },
       key(),
-    ).catch((caught: unknown) => caught);
+    ).catch((cause: unknown) => cause);
     assert.ok(error instanceof PaymentError);
     assert.equal(error.providerCode, "refund_authorization_declined");
   });

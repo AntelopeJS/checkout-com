@@ -47,13 +47,26 @@ export interface ErrorContext {
   method?: string;
 }
 
-const CUSTOMER_ENTITIES = new Set<string>(["customer", "payment method"]);
+const CUSTOMER_ENTITIES = new Set<ErrorContext["entity"]>([
+  "customer",
+  "payment method",
+]);
 
-function notFound(id: string, entity: string, code?: string): PaymentError {
-  if (CUSTOMER_ENTITIES.has(entity)) {
-    return new CustomerNotFoundError(id, entity as CustomerEntity, code);
+function isCustomerEntity(
+  entity: ErrorContext["entity"],
+): entity is CustomerEntity {
+  return CUSTOMER_ENTITIES.has(entity);
+}
+
+function notFound(
+  id: string,
+  entity: ErrorContext["entity"],
+  code?: string,
+): PaymentError {
+  if (isCustomerEntity(entity)) {
+    return new CustomerNotFoundError(id, entity, code);
   }
-  return new PaymentNotFoundError(id, entity as PaymentEntity, code);
+  return new PaymentNotFoundError(id, entity, code);
 }
 
 function fromUnprocessable(
@@ -106,33 +119,34 @@ function fromForbidden(
  * plain {@link PaymentError}: each is retryable, and reporting one as "this
  * payment cannot be refunded" turns an outage into a permanent refusal.
  *
- * @param error - The thrown value, which may not be a Checkout.com error at all
+ * @param cause - The thrown value, which may not be a Checkout.com error at all
  * @param id - The identifier the call was made against, for the message
  * @param context - What a 404 and a 403 mean for this call
+ * @returns The translated error, or `cause` itself when Checkout.com did not raise it
  */
-export function TranslateError(
-  error: unknown,
+export function TranslateError<Cause>(
+  cause: Cause,
   id: string,
   context: ErrorContext,
-): unknown {
-  if (error instanceof CkoTransportError) {
-    return new PaymentError(error.message, "unreachable");
+): Cause | PaymentError {
+  if (cause instanceof CkoTransportError) {
+    return new PaymentError(cause.message, "unreachable");
   }
-  if (!(error instanceof CkoApiError)) {
-    return error;
+  if (!(cause instanceof CkoApiError)) {
+    return cause;
   }
-  if (error.status === NOT_FOUND) {
+  if (cause.status === NOT_FOUND) {
     return notFound(id, context.entity, String(NOT_FOUND));
   }
-  if (error.status === FORBIDDEN) {
-    return fromForbidden(error, context);
+  if (cause.status === FORBIDDEN) {
+    return fromForbidden(cause, context);
   }
-  if (error.status === UNPROCESSABLE) {
-    return fromUnprocessable(error, id, context);
+  if (cause.status === UNPROCESSABLE) {
+    return fromUnprocessable(cause, id, context);
   }
   return new PaymentError(
-    error.message,
-    error.errorCodes[0] ?? error.errorType ?? String(error.status),
+    cause.message,
+    cause.errorCodes[0] ?? cause.errorType ?? String(cause.status),
   );
 }
 

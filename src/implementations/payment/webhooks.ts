@@ -5,6 +5,7 @@ import type {
   WebhookRequest,
 } from "@antelopejs/interface-payment";
 
+import { LookUp } from "./lookup";
 import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { AssertGenuine } from "./signature";
@@ -23,7 +24,7 @@ import {
 const APPROVED = "payment_approved";
 const REFUNDED = "payment_refunded";
 
-const PAYMENT_EVENTS: Record<string, PaymentEventType> = {
+const PAYMENT_EVENTS = {
   [APPROVED]: "payment.authorized",
   payment_canceled: "payment.canceled",
   payment_captured: "payment.succeeded",
@@ -32,16 +33,16 @@ const PAYMENT_EVENTS: Record<string, PaymentEventType> = {
   payment_paid: "payment.succeeded",
   payment_pending: "payment.pending",
   payment_voided: "payment.canceled",
-};
+} satisfies Record<string, PaymentEventType>;
 
-const REFUND_EVENTS: Record<string, PaymentEventType> = {
+const REFUND_EVENTS = {
   [REFUNDED]: "refund.succeeded",
   payment_refund_declined: "refund.failed",
-};
+} satisfies Record<string, PaymentEventType>;
 
-const DISPUTE_EVENTS: Record<string, PaymentEventType> = {
+const DISPUTE_EVENTS = {
   dispute_received: "dispute.opened",
-};
+} satisfies Record<string, PaymentEventType>;
 
 type EventBuilder = (
   account: Account,
@@ -126,17 +127,19 @@ async function buildEvent(
   account: Account,
   envelope: CkoEventEnvelope,
 ): Promise<PaymentEvent | undefined> {
-  const match = BUILDERS.find(([types]) => types[envelope.type]);
-  if (!match) return undefined;
-  const [types, build] = match;
-  const built = await build(account, envelope, types[envelope.type]);
-  if (!built?.type) return undefined;
-  return {
-    ...built,
-    id: envelope.id,
-    type: built.type,
-    createdAt: ToEpochMillis(envelope.created_on ?? envelope.timestamp),
-  };
+  for (const [types, build] of BUILDERS) {
+    const type = LookUp(types, envelope.type);
+    if (!type) continue;
+    const built = await build(account, envelope, type);
+    if (!built?.type) return undefined;
+    return {
+      ...built,
+      id: envelope.id,
+      type: built.type,
+      createdAt: ToEpochMillis(envelope.created_on ?? envelope.timestamp),
+    };
+  }
+  return undefined;
 }
 
 /**

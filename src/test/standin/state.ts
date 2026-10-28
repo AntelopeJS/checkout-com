@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 
+import type { JsonObject } from "./wire";
+
 export type Metadata = Record<string, string | number | boolean>;
 
 export interface SimCard {
@@ -76,7 +78,7 @@ export interface SimPayment {
 export interface SimHostedPayment {
   id: string;
   status: string;
-  request: Record<string, unknown>;
+  request: JsonObject;
   paymentId?: string;
   createdAt: number;
 }

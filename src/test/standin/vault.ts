@@ -7,6 +7,14 @@ import instrumentFixture from "./fixtures/instrument-201.json";
 import customerCreatedFixture from "./fixtures/customer-201.json";
 import emailTakenFixture from "./fixtures/customer-422-email-exists.json";
 import {
+  type JsonObject,
+  type JsonValue,
+  MetadataOf,
+  ObjectOf,
+  TextOf,
+  isText,
+} from "./wire";
+import {
   type Metadata,
   NewId,
   type SimCard,
@@ -23,8 +31,6 @@ const TOKEN_LIFETIME_MS = 15 * 60 * 1000;
 const CUSTOMER_METADATA_PAIRS = 20;
 const CUSTOMER_METADATA_LENGTH = 100;
 
-type Body = Record<string, unknown>;
-
 export interface ResolvedSource {
   card: SimCard;
   instrument?: SimInstrument;
@@ -32,7 +38,7 @@ export interface ResolvedSource {
   commit: (isApproved: boolean) => void;
 }
 
-function cardView(card: SimCard, base: Body): Body {
+function cardView(card: SimCard, base: JsonObject): JsonObject {
   return {
     ...base,
     scheme: Scheme(card),
@@ -43,8 +49,8 @@ function cardView(card: SimCard, base: Body): Body {
   };
 }
 
-function useToken(context: SimContext, token: unknown): SimCard {
-  const stored = context.state.tokens.get(token as string);
+function useToken(context: SimContext, token: JsonValue | undefined): SimCard {
+  const stored = isText(token) ? context.state.tokens.get(token) : undefined;
   if (!stored) throw new SimError(Problem("token_invalid"));
   if (stored.isUsed) throw new SimError(Problem("token_used"));
   if (stored.expiresAt < Date.now())
@@ -55,32 +61,36 @@ function useToken(context: SimContext, token: unknown): SimCard {
 
 function payingCustomer(
   context: SimContext,
-  customer: Body | undefined,
+  customer: JsonObject | undefined,
 ): string | undefined {
   if (!customer) return undefined;
   if (customer.id) {
-    if (!context.state.customers.has(customer.id as string)) {
+    if (!isText(customer.id) || !context.state.customers.has(customer.id)) {
       throw new SimError(Problem("customer_not_found"));
     }
-    return customer.id as string;
+    return customer.id;
   }
-  if (typeof customer.email !== "string") return undefined;
+  if (!isText(customer.email)) return undefined;
   const existing = context.state.customerByEmail(customer.email);
   if (existing) return existing.id;
-  const created = newCustomer(customer.email, customer.name as string, {});
+  const created = newCustomer(customer.email, TextOf(customer.name), {});
   context.state.customers.set(created.id, created);
   return created.id;
 }
 
-function storedInstrument(context: SimContext, id: unknown): SimInstrument {
-  const instrument = context.state.instruments.get(id as string);
+function storedInstrument(
+  context: SimContext,
+  id: string | undefined,
+): SimInstrument {
+  const instrument =
+    id === undefined ? undefined : context.state.instruments.get(id);
   if (!instrument) throw new SimError(Problem("source_id_unknown"));
   return instrument;
 }
 
 function tokenSource(
   context: SimContext,
-  source: Body,
+  source: JsonObject,
   customer: string | undefined,
   isStoring: boolean,
 ): ResolvedSource {
@@ -103,16 +113,16 @@ function tokenSource(
  */
 export function ResolveSource(
   context: SimContext,
-  body: Body,
+  body: JsonObject,
   isStoring: boolean,
 ): ResolvedSource {
-  const source = body.source as Body | undefined;
-  const customer = payingCustomer(context, body.customer as Body | undefined);
+  const source = ObjectOf(body.source);
+  const customer = payingCustomer(context, ObjectOf(body.customer));
   if (source?.type === "token") {
     return tokenSource(context, source, customer, isStoring);
   }
   if (source?.type === "id") {
-    const instrument = storedInstrument(context, source.id);
+    const instrument = storedInstrument(context, TextOf(source.id));
     return {
       card: instrument.card,
       instrument,
@@ -121,7 +131,9 @@ export function ResolveSource(
     };
   }
   if (source?.type === "customer") {
-    const owner = context.state.customers.get(source.id as string);
+    const owner = isText(source.id)
+      ? context.state.customers.get(source.id)
+      : undefined;
     const instrument = storedInstrument(context, owner?.defaultInstrument);
     return {
       card: instrument.card,
@@ -133,17 +145,14 @@ export function ResolveSource(
   throw new SimError(Problem("payment_source_required"));
 }
 
-/** `POST /tokens` (public key): card details for a 15-minute, single-use token. */
-export function CreateToken(
-  context: SimContext,
-  request: StandInRequest,
-): StandInReply {
-  const { body } = request;
-  const card: SimCard = {
-    number: typeof body.number === "string" ? body.number : "",
-    expiryMonth: Number(body.expiry_month),
-    expiryYear: Number(body.expiry_year),
-  };
+/** A single-use token issued for a card, and when it lapses. */
+export interface IssuedToken {
+  token: string;
+  expiresAt: number;
+}
+
+/** Issues a 15-minute, single-use token for a card with a plausible number. */
+export function IssueToken(context: SimContext, card: SimCard): IssuedToken {
   if (!/^\d{12,19}$/.test(card.number)) {
     throw new SimError(Problem("card_number_invalid"));
   }
@@ -155,19 +164,34 @@ export function CreateToken(
     isUsed: false,
     expiresAt,
   });
+  return { token, expiresAt };
+}
+
+/** `POST /tokens` (public key): card details for a 15-minute, single-use token. */
+export function CreateToken(
+  context: SimContext,
+  request: StandInRequest,
+): StandInReply {
+  const { body } = request;
+  const card: SimCard = {
+    number: TextOf(body.number) ?? "",
+    expiryMonth: Number(body.expiry_month),
+    expiryYear: Number(body.expiry_year),
+  };
+  const { token, expiresAt } = IssueToken(context, card);
   return {
     status: CREATED,
     body: {
-      ...cardView(card, structuredClone(tokenFixture) as Body),
+      ...cardView(card, structuredClone(tokenFixture)),
       token,
       expires_on: new Date(expiresAt).toISOString(),
     },
   };
 }
 
-function instrumentView(instrument: SimInstrument): Body {
+function instrumentView(instrument: SimInstrument): JsonObject {
   const view = cardView(instrument.card, {
-    ...(structuredClone(instrumentFixture) as Body),
+    ...structuredClone(instrumentFixture),
     id: instrument.id,
   });
   if (instrument.customer) view.customer = { id: instrument.customer };
@@ -183,7 +207,7 @@ export function CreateInstrument(
   if (body.type !== "token")
     throw new SimError(Problem("instrument_type_invalid"));
   const card = useToken(context, body.token);
-  const customer = payingCustomer(context, body.customer as Body | undefined);
+  const customer = payingCustomer(context, ObjectOf(body.customer));
   const instrument: SimInstrument = { id: NewId("src"), card, customer };
   context.state.instruments.set(instrument.id, instrument);
   return { status: CREATED, body: instrumentView(instrument) };
@@ -206,9 +230,7 @@ export function UpdateInstrument(
   id: string,
 ): StandInReply {
   const instrument = instrumentOr404(context, id);
-  const customer = (request.body.customer as Body | undefined)?.id as
-    | string
-    | undefined;
+  const customer = TextOf(ObjectOf(request.body.customer)?.id);
   if (customer && !context.state.customers.has(customer)) {
     throw new SimError(Problem("customer_not_found"));
   }
@@ -232,8 +254,8 @@ export function DeleteInstrument(
  * "A maximum of 20 key-value pairs. Each key and value can be up to 100
  * characters long." The error code for exceeding it is not documented.
  */
-function assertCustomerMetadata(metadata: unknown): void {
-  const entries = Object.entries((metadata as Metadata | undefined) ?? {});
+function assertCustomerMetadata(metadata: JsonValue | undefined): void {
+  const entries = Object.entries(MetadataOf(metadata) ?? {});
   const isTooLong = entries.some(
     ([field, value]) =>
       field.length > CUSTOMER_METADATA_LENGTH ||
@@ -249,7 +271,9 @@ function newCustomer(
   name: string | undefined,
   metadata: Metadata,
 ): SimCustomer {
-  return { id: NewId("cus"), email, metadata, ...(name ? { name } : {}) };
+  const customer: SimCustomer = { id: NewId("cus"), email, metadata };
+  if (name) customer.name = name;
+  return customer;
 }
 
 /** `POST /customers`: email required and unique. */
@@ -259,7 +283,7 @@ export function CreateCustomer(
 ): StandInReply {
   const { email, name, metadata } = request.body;
   assertCustomerMetadata(metadata);
-  if (typeof email !== "string" || !email.includes("@")) {
+  if (!isText(email) || !email.includes("@")) {
     throw new SimError(Problem("customer_email_invalid"));
   }
   if (context.state.customerByEmail(email)) {
@@ -268,11 +292,7 @@ export function CreateCustomer(
       body: structuredClone(emailTakenFixture),
     });
   }
-  const customer = newCustomer(
-    email,
-    name as string | undefined,
-    (metadata as Metadata) ?? {},
-  );
+  const customer = newCustomer(email, TextOf(name), MetadataOf(metadata) ?? {});
   context.state.customers.set(customer.id, customer);
   return {
     status: CREATED,
@@ -295,15 +315,15 @@ export function GetCustomer(
   identifier: string,
 ): StandInReply {
   const customer = customerOr404(context, identifier);
-  const [instrumentShape] = customerFixture.instruments;
-  const body: Body = {
-    ...(structuredClone(customerFixture) as Body),
+  const [instrumentExample] = customerFixture.instruments;
+  const body: JsonObject = {
+    ...structuredClone(customerFixture),
     id: customer.id,
     email: customer.email,
     metadata: { ...customer.metadata },
     instruments: context.state.instrumentsOf(customer.id).map((instrument) =>
       cardView(instrument.card, {
-        ...structuredClone(instrumentShape),
+        ...structuredClone(instrumentExample),
         id: instrument.id,
       }),
     ),
@@ -325,9 +345,10 @@ export function UpdateCustomer(
   const customer = customerOr404(context, id);
   const { metadata, name, default: preferred } = request.body;
   assertCustomerMetadata(metadata);
-  if (metadata) customer.metadata = metadata as Metadata;
-  if (typeof name === "string") customer.name = name;
-  if (typeof preferred === "string") customer.defaultInstrument = preferred;
+  const replacement = MetadataOf(metadata);
+  if (replacement) customer.metadata = replacement;
+  if (isText(name)) customer.name = name;
+  if (isText(preferred)) customer.defaultInstrument = preferred;
   return { status: NO_CONTENT };
 }
 
