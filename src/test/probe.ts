@@ -14,7 +14,8 @@ type Registry = Record<symbol, SubscriptionsProbe | undefined>;
 
 /** interface-subscriptions, called from the probe module's own context. */
 export function Subscriptions(): SubscriptionsProbe {
-  const probe = (globalThis as typeof globalThis & Registry)[PROBE];
+  const registry: Registry = globalThis;
+  const probe = registry[PROBE];
   if (!probe) throw new Error("The renewal probe module is not running");
   return probe;
 }

@@ -8,8 +8,10 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { Subscriptions } from "./probe";
+import { isPaymentDetails } from "./raw";
 import { TEST_CARDS } from "./constants";
 import { CurrentStandIn } from "./standin";
+import { ObjectOf } from "./standin/wire";
 import {
   CardToken,
   ReadRaw,
@@ -24,10 +26,6 @@ const PERIOD = { value: 1900, currency: "EUR" };
 const ANCHOR_DELAY_MS = 2000;
 const SECOND_MS = 1000;
 const RETURN_URL = "https://merchant.invalid/return";
-
-interface PaymentDetailsView {
-  payment_type?: string;
-}
 
 function wholeSecondsFromNow(ms: number): number {
   return Math.ceil((Date.now() + ms) / SECOND_MS) * SECOND_MS;
@@ -64,9 +62,8 @@ function assertChainedOnTheWire(
     (call) =>
       call.method === "POST" &&
       call.path === "/payments" &&
-      (call.body.metadata as Record<string, string> | undefined)?.[
-        SUBSCRIPTION_METADATA_KEY
-      ] === subscription,
+      ObjectOf(call.body.metadata)?.[SUBSCRIPTION_METADATA_KEY] ===
+        subscription,
   );
   assert.ok(
     charges.length > 0,
@@ -121,7 +118,7 @@ describe("[checkout-com] subscriptions from payment-subscriptions", function () 
     assert.equal(charge.metadata?.[SUBSCRIPTION_METADATA_KEY], subscription.id);
     assert.equal(charge.amount.value, PERIOD.value);
 
-    const raw = await ReadRaw<PaymentDetailsView>(`/payments/${charge.id}`);
+    const raw = await ReadRaw(`/payments/${charge.id}`, isPaymentDetails);
     assert.equal(raw.payment_type, "Recurring");
     assertChainedOnTheWire(subscription.id, saving, method);
   });

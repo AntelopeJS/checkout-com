@@ -31,15 +31,15 @@ const declined = (responseCode: string, responseSummary: string) => ({
 });
 
 /** "Default cards", "Response code tests" and "3DS test cards". */
-const BEHAVIOUR_BY_NUMBER: Record<string, CardBehaviour> = {
-  "4242424242424242": approved("frictionless"),
-  "4485040371536584": approved("frictionless"),
-  "4010061700000021": approved("challenge"),
-  "4532432452900131": approved("not_enabled"),
-  "4500622868341387": approved("upgrade"),
-  "4544249167673670": declined(INSUFFICIENT_FUNDS, "Insufficient Funds"),
-  "4539467987109256": declined("20005", "Declined - Do not honour"),
-};
+const BEHAVIOUR_BY_NUMBER = new Map<string, CardBehaviour>([
+  ["4242424242424242", approved("frictionless")],
+  ["4485040371536584", approved("frictionless")],
+  ["4010061700000021", approved("challenge")],
+  ["4532432452900131", approved("not_enabled")],
+  ["4500622868341387", approved("upgrade")],
+  ["4544249167673670", declined(INSUFFICIENT_FUNDS, "Insufficient Funds")],
+  ["4539467987109256", declined("20005", "Declined - Do not honour")],
+]);
 
 function isExpired(card: SimCard, now: Date): boolean {
   const year = now.getUTCFullYear();
@@ -62,7 +62,7 @@ export function CardOutcome(card: SimCard, amount: number): CardBehaviour {
   if (card.number === DECLINE_BY_AMOUNT_CARD && amount === DECLINE_BY_AMOUNT) {
     return declined(INSUFFICIENT_FUNDS, "Insufficient Funds");
   }
-  return BEHAVIOUR_BY_NUMBER[card.number] ?? approved("frictionless");
+  return BEHAVIOUR_BY_NUMBER.get(card.number) ?? approved("frictionless");
 }
 
 export function NotEnrolled(): CardBehaviour {

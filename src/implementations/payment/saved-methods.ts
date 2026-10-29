@@ -32,12 +32,18 @@ export function IsInternalCustomerKey(key: string): boolean {
   return key === IDEMPOTENCY_KEY || key.startsWith(METHOD_KEY_PREFIX);
 }
 
+type MetadataValue = CkoMetadata[string] | undefined;
+
+function isString(value: MetadataValue): value is string {
+  return typeof value === "string";
+}
+
 export function ReadSavedMethod(
   metadata: CkoMetadata | undefined,
   instrument: string,
 ): SavedMethod | undefined {
   const raw = metadata?.[methodKey(instrument)];
-  if (typeof raw !== "string") return undefined;
+  if (!isString(raw)) return undefined;
   const [initialPayment = "", savedAt = ""] = raw.split(RECORD_SEPARATOR);
   const time = Number(savedAt);
   return initialPayment && Number.isFinite(time)
@@ -108,19 +114,19 @@ export async function FindSavedMethod(
  */
 export async function RememberHostedSave(
   client: CkoClient,
-  customer: unknown,
+  customer: MetadataValue,
   payment: Payment,
 ): Promise<void> {
-  if (typeof customer !== "string" || !payment.paymentMethod) return;
+  if (!isString(customer) || !payment.paymentMethod) return;
   if (payment.status === "failed" || payment.status === "canceled") return;
   await RecordSavedMethod(
     client,
     customer,
     payment.paymentMethod,
     payment.id,
-  ).catch((error: unknown) => {
+  ).catch((cause: unknown) => {
     process.stderr.write(
-      `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${error instanceof Error ? error.message : String(error)})\n`,
+      `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)})\n`,
     );
   });
 }

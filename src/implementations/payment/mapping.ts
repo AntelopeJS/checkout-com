@@ -14,6 +14,7 @@ import type {
 } from "@antelopejs/interface-payment";
 
 import { ToRefundId } from "./ids";
+import { LookUp } from "./lookup";
 import type {
   CkoAction,
   CkoDisputeEventData,
@@ -38,9 +39,16 @@ export const SAVE_FOR_KEY = "antelope_save_for";
 /** Checkout.com's refund request has no reason field; it is kept here. */
 export const REFUND_REASON_KEY = "antelope_refund_reason";
 
+/** The entries this module keeps in a payment's metadata, next to the caller's. */
+export type InternalMetadata = {
+  [CAPTURE_KEY]?: string;
+  [SAVE_FOR_KEY]?: string;
+  [REFUND_REASON_KEY]?: string;
+};
+
 const INTERNAL_KEYS = new Set([CAPTURE_KEY, SAVE_FOR_KEY, REFUND_REASON_KEY]);
 
-const STATUS_BY_CKO: Record<string, PaymentStatus> = {
+const STATUS_BY_CKO = {
   Authorized: "authorized",
   Canceled: "canceled",
   Captured: "succeeded",
@@ -54,9 +62,9 @@ const STATUS_BY_CKO: Record<string, PaymentStatus> = {
   Refunded: "succeeded",
   "Retry Scheduled": "pending",
   Voided: "canceled",
-};
+} satisfies Record<string, PaymentStatus>;
 
-const FAILURE_BY_RESPONSE_CODE: Record<string, PaymentFailureCode> = {
+const FAILURE_BY_RESPONSE_CODE = {
   "20014": "incorrect_details",
   "20051": "insufficient_funds",
   "20054": "expired_card",
@@ -77,14 +85,14 @@ const FAILURE_BY_RESPONSE_CODE: Record<string, PaymentFailureCode> = {
   "30033": "expired_card",
   "43401": "authentication_failed",
   "50280": "insufficient_funds",
-};
+} satisfies Record<string, PaymentFailureCode>;
 
-const METHOD_TYPE_BY_CKO: Record<string, PaymentMethodType> = {
+const METHOD_TYPE_BY_CKO = {
   ach: "bank_account",
   bank_account: "bank_account",
   card: "card",
   sepa: "bank_account",
-};
+} satisfies Record<string, PaymentMethodType>;
 
 export interface PaymentContext {
   /** The amount asked for, for the 202 answer that does not repeat it. */
@@ -129,7 +137,7 @@ export function WriteMetadata(
  * present on the answer to the call that created the payment.
  */
 export function ToPaymentStatus(payment: CkoPayment): PaymentStatus {
-  const status = STATUS_BY_CKO[payment.status] ?? "pending";
+  const status = LookUp(STATUS_BY_CKO, payment.status) ?? "pending";
   if (status === "pending" && payment._links?.redirect?.href) {
     return "requires_action";
   }
@@ -147,11 +155,14 @@ export function ToFailure(
   summary: string | undefined,
 ): PaymentFailure {
   const code = responseCode === undefined ? undefined : String(responseCode);
-  return {
-    code: FAILURE_BY_RESPONSE_CODE[code ?? ""] ?? "declined",
+  const failure: PaymentFailure = {
+    code: LookUp(FAILURE_BY_RESPONSE_CODE, code ?? "") ?? "declined",
     message: summary || "The payment was declined",
-    ...(code ? { providerCode: code } : {}),
   };
+  if (code) {
+    failure.providerCode = code;
+  }
+  return failure;
 }
 
 function redirectUrl(payment: CkoPayment): string {
@@ -184,7 +195,7 @@ export function ToPayment(
   const status = ToPaymentStatus(payment);
   const currency = payment.currency ?? context.requested?.currency ?? "";
   const metadata = ReadMetadata(payment.metadata);
-  return {
+  const normalised: Payment = {
     id: payment.id,
     amount: toAmount(payment.amount ?? context.requested?.value, currency),
     amountCaptured: toAmount(payment.balances?.total_captured, currency),
@@ -192,14 +203,23 @@ export function ToPayment(
     status,
     reference: payment.reference ?? "",
     createdAt: ToEpochMillis(payment.requested_on ?? payment.processed_on),
-    ...(payment.customer?.id ? { customer: payment.customer.id } : {}),
-    ...(payment.source?.id ? { paymentMethod: payment.source.id } : {}),
-    ...(status === "requires_action"
-      ? { redirectUrl: redirectUrl(payment) }
-      : {}),
-    ...(status === "failed" ? { failure: failureOf(payment, context) } : {}),
-    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
   };
+  if (payment.customer?.id) {
+    normalised.customer = payment.customer.id;
+  }
+  if (payment.source?.id) {
+    normalised.paymentMethod = payment.source.id;
+  }
+  if (status === "requires_action") {
+    normalised.redirectUrl = redirectUrl(payment);
+  }
+  if (status === "failed") {
+    normalised.failure = failureOf(payment, context);
+  }
+  if (Object.keys(metadata).length > 0) {
+    normalised.metadata = metadata;
+  }
+  return normalised;
 }
 
 /**
@@ -220,22 +240,23 @@ export function ToRefund(
   const currency = payment.currency ?? requested?.currency ?? "";
   const status = refundStatus(action);
   const metadata = ReadMetadata(action?.metadata);
-  return {
+  const refund: Refund = {
     id: ToRefundId(payment.id, refundAction),
     payment: payment.id,
     amount: toAmount(action?.amount ?? requested?.value, currency),
     status,
     createdAt: ToEpochMillis(action?.processed_on),
-    ...(status === "failed"
-      ? {
-          failure: {
-            ...ToFailure(action?.response_code, action?.response_summary),
-            code: "processing_error" as PaymentFailureCode,
-          },
-        }
-      : {}),
-    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
   };
+  if (status === "failed") {
+    refund.failure = {
+      ...ToFailure(action?.response_code, action?.response_summary),
+      code: "processing_error",
+    };
+  }
+  if (Object.keys(metadata).length > 0) {
+    refund.metadata = metadata;
+  }
+  return refund;
 }
 
 function toCard(instrument: CkoInstrument): CardDetails | undefined {
@@ -256,24 +277,30 @@ export function ToPaymentMethod(
   savedAt: number,
 ): PaymentMethod {
   const card = toCard(instrument);
-  return {
+  const method: PaymentMethod = {
     id: instrument.id,
-    type: METHOD_TYPE_BY_CKO[instrument.type] ?? "other",
+    type: LookUp(METHOD_TYPE_BY_CKO, instrument.type) ?? "other",
     customer,
     createdAt: savedAt,
-    ...(card ? { card } : {}),
   };
+  if (card) {
+    method.card = card;
+  }
+  return method;
 }
 
 export function ToDispute(
   dispute: CkoDisputeEventData,
   fallbackTime: string | undefined,
 ): Dispute {
-  return {
+  const opened: Dispute = {
     id: dispute.id,
     payment: dispute.payment_id ?? "",
     amount: toAmount(dispute.amount, dispute.currency ?? ""),
     createdAt: ToEpochMillis(dispute.date ?? fallbackTime),
-    ...(dispute.category ? { reason: dispute.category } : {}),
   };
+  if (dispute.category) {
+    opened.reason = dispute.category;
+  }
+  return opened;
 }

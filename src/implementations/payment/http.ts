@@ -1,3 +1,5 @@
+import type { JsonValue } from "./cko-types";
+
 type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST";
 
 export interface CkoRequest {
@@ -59,36 +61,43 @@ export class CkoTransportError extends Error {
   }
 }
 
-function headers(
-  secretKey: string,
-  request: CkoRequest,
-): Record<string, string> {
-  return {
+type CkoHeaders = {
+  Authorization: string;
+  Accept: string;
+  "Content-Type"?: string;
+  [IDEMPOTENCY_HEADER]?: string;
+};
+
+function headers(secretKey: string, request: CkoRequest): CkoHeaders {
+  const sent: CkoHeaders = {
     Authorization: `Bearer ${secretKey}`,
     Accept: "application/json",
-    ...(request.body !== undefined
-      ? { "Content-Type": "application/json" }
-      : {}),
-    ...(request.idempotencyKey
-      ? { [IDEMPOTENCY_HEADER]: request.idempotencyKey }
-      : {}),
   };
+  if (request.body !== undefined) {
+    sent["Content-Type"] = "application/json";
+  }
+  if (request.idempotencyKey) {
+    sent[IDEMPOTENCY_HEADER] = request.idempotencyKey;
+  }
+  return sent;
 }
 
-async function readBody(response: Response): Promise<unknown> {
+function failureReason(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+async function readBody(response: Response): Promise<JsonValue | undefined> {
   if (response.status === NO_CONTENT) {
     return undefined;
   }
-  const text = await response.text().catch((error: unknown) => {
-    throw new CkoTransportError(
-      error instanceof Error ? error.message : String(error),
-    );
+  const text = await response.text().catch((cause: unknown) => {
+    throw new CkoTransportError(failureReason(cause));
   });
   if (!text) {
     return undefined;
   }
   try {
-    return JSON.parse(text) as unknown;
+    return JSON.parse(text);
   } catch {
     return { error_type: "unparseable_response" };
   }
@@ -112,10 +121,8 @@ export class CkoClient {
       body:
         request.body === undefined ? undefined : JSON.stringify(request.body),
       signal: AbortSignal.timeout(this.settings.timeoutMs),
-    }).catch((error: unknown) => {
-      throw new CkoTransportError(
-        error instanceof Error ? error.message : String(error),
-      );
+    }).catch((cause: unknown) => {
+      throw new CkoTransportError(failureReason(cause));
     });
     const body = await readBody(response);
     if (!response.ok) {
