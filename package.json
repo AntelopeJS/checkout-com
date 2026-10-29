@@ -50,9 +50,10 @@
   },
   "devDependencies": {
     "@antelopejs/core": "^1.17.1",
-    "@antelopejs/interface-database": "^0.1.8",
-    "@antelopejs/interface-subscriptions": ">=0.0.2 <0.1.0",
-    "@antelopejs/mongodb": "^1.4.0",
+    "@antelopejs/interface-database": "^0.2.0",
+    "@antelopejs/interface-subscriptions": ">=0.1.0 <1.0.0",
+    "@antelopejs/mongodb": "^1.6.0",
+    "@antelopejs/payment-subscriptions": "0.0.3",
     "@antelopejs/tooling-configs": "^0.2.11",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.15",

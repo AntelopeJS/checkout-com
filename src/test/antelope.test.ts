@@ -1,4 +1,3 @@
-import path from "node:path";
 import { MongoMemoryServer } from "mongodb-memory-server-core";
 import {
   type AntelopeConfig,
@@ -7,7 +6,6 @@ import {
 
 import { type Config, DefaultBaseUrl } from "../config";
 import { MintInstrument, type Target } from "./mint";
-import { PrepareFallbackModule } from "./fallback-module";
 import { type LiveEnvironment, ResolveEnvironment } from "./environment";
 import {
   RegisterStandIn,
@@ -26,7 +24,6 @@ import {
 
 const MONGO_VERSION = "8.0.8";
 const TEST_POLL_MS = 100;
-const MODULE_ROOT = path.resolve(__dirname, "../..");
 
 let standIn: StandIn | undefined;
 let mongod: MongoMemoryServer | undefined;
@@ -111,7 +108,10 @@ function fallbackModules(
       config: { url: mongoUrl, database: "checkout_com_test" },
     },
     subscriptions: {
-      source: { type: "local", path: PrepareFallbackModule(MODULE_ROOT) },
+      source: {
+        type: "local",
+        path: "node_modules/@antelopejs/payment-subscriptions",
+      },
       config: { pollIntervalMs: TEST_POLL_MS, sweepIntervalMs: TEST_POLL_MS },
     },
     probe: { source: { type: "local", path: "test/renewal-probe" } },
