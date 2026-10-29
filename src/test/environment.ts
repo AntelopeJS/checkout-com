@@ -51,10 +51,11 @@ export function ResolveEnvironment(
   }
   assertSandbox(secretKey);
   assertChannel(processingChannelId);
-  return {
+  const environment: LiveEnvironment = {
     mode: "live",
     secretKey,
     processingChannelId,
-    ...(env.CKO_BASE_URL ? { baseUrl: env.CKO_BASE_URL } : {}),
   };
+  if (env.CKO_BASE_URL) environment.baseUrl = env.CKO_BASE_URL;
+  return environment;
 }

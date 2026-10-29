@@ -1,23 +1,31 @@
 import { createHash } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import {
+  type IncomingHttpHeaders,
   type IncomingMessage,
   type Server,
   type ServerResponse,
   createServer,
 } from "node:http";
 
+import {
+  type JsonObject,
+  type JsonValue,
+  ParseJson,
+  isJsonObject,
+} from "./wire";
+
 export interface StandInRequest {
   method: string;
   path: string;
   query: URLSearchParams;
-  headers: IncomingMessage["headers"];
-  body: Record<string, unknown>;
+  headers: IncomingHttpHeaders;
+  body: JsonObject;
 }
 
 export interface StandInReply {
   status: number;
-  body?: unknown;
+  body?: JsonValue;
 }
 
 export type Handler = (
@@ -37,13 +45,13 @@ export interface RecordedCall {
   method: string;
   path: string;
   idempotencyKey?: string;
-  body: Record<string, unknown>;
+  body: JsonObject;
   status: number;
   replayed: boolean;
 }
 
 export type Fault =
-  | { kind: "status"; status: number; body?: unknown }
+  | { kind: "status"; status: number; body?: JsonValue }
   | { kind: "drop" };
 
 export interface StandInKeys {
@@ -62,19 +70,31 @@ const UNPROCESSABLE = 422;
 const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 
-function fingerprint(method: string, path: string, body: unknown): string {
+function fingerprint(method: string, path: string, body: JsonObject): string {
   return createHash("sha256")
     .update(`${method} ${path} ${JSON.stringify(body)}`)
     .digest("hex");
 }
 
-async function readJson(request: IncomingMessage): Promise<unknown> {
+async function readBody(request: IncomingMessage): Promise<JsonObject> {
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
-    chunks.push(chunk as Buffer);
+    chunks.push(chunk);
   }
   const text = Buffer.concat(chunks).toString("utf8");
-  return text ? (JSON.parse(text) as unknown) : {};
+  const body = text ? ParseJson(text) : {};
+  return isJsonObject(body) ? body : {};
+}
+
+function idempotencyKeyOf(headers: IncomingHttpHeaders): string | undefined {
+  const value = headers[IDEMPOTENCY_HEADER];
+  return Array.isArray(value) ? value.join(", ") : value;
+}
+
+function isAddressInfo(
+  address: ReturnType<Server["address"]>,
+): address is AddressInfo {
+  return typeof address === "object" && address !== null;
 }
 
 function isSuccess(status: number): boolean {
@@ -112,8 +132,11 @@ export class StandInServer {
     await new Promise<void>((resolve) =>
       this.server!.listen(0, "127.0.0.1", resolve),
     );
-    const { port } = this.server.address() as AddressInfo;
-    return `http://127.0.0.1:${port}`;
+    const address = this.server.address();
+    if (!isAddressInfo(address)) {
+      throw new Error("The stand-in is not listening on a TCP port");
+    }
+    return `http://127.0.0.1:${address.port}`;
   }
 
   async stop(): Promise<void> {
@@ -145,9 +168,9 @@ export class StandInServer {
     }
     const reply = fault
       ? { status: fault.status, body: fault.body }
-      : await this.answer(request).catch((error: unknown) => ({
+      : await this.answer(request).catch((cause: unknown) => ({
           status: 500,
-          body: { error_type: "stand_in_failure", detail: String(error) },
+          body: { error_type: "stand_in_failure", detail: String(cause) },
         }));
     response.statusCode = reply.status;
     if (reply.body === undefined) {
@@ -165,7 +188,7 @@ export class StandInServer {
 
   private async answer(request: IncomingMessage): Promise<StandInReply> {
     const url = new URL(request.url ?? "/", "http://stand-in");
-    const body = (await readJson(request)) as Record<string, unknown>;
+    const body = await readBody(request);
     const call: StandInRequest = {
       method: request.method ?? "GET",
       path: url.pathname,
@@ -201,7 +224,7 @@ export class StandInServer {
     route: Route,
     params: string[],
   ): Promise<StandInReply> {
-    const key = call.headers[IDEMPOTENCY_HEADER] as string | undefined;
+    const key = idempotencyKeyOf(call.headers);
     if (!key) {
       return this.record(call, await route.handler(call, params), false);
     }
@@ -231,15 +254,16 @@ export class StandInServer {
     reply: StandInReply,
     replayed: boolean,
   ): StandInReply {
-    const key = call.headers[IDEMPOTENCY_HEADER] as string | undefined;
-    this.calls.push({
+    const key = idempotencyKeyOf(call.headers);
+    const recorded: RecordedCall = {
       method: call.method,
       path: call.path,
       body: call.body,
       status: reply.status,
       replayed,
-      ...(key ? { idempotencyKey: key } : {}),
-    });
+    };
+    if (key) recorded.idempotencyKey = key;
+    this.calls.push(recorded);
     return reply;
   }
 }

@@ -1,6 +1,7 @@
 import type { SimState } from "./state";
 import type { CardBehaviour } from "./cards";
 import type { StandInReply } from "./server";
+import { type JsonValue, isCount, isText } from "./wire";
 
 const UNPROCESSABLE = 422;
 const ACTION_DELAY_MS = 60;
@@ -56,15 +57,24 @@ export function Problem(code: string): StandInReply {
   };
 }
 
+/** A payment amount that passed the rules of {@link ParseAmount}. */
+export interface Amount {
+  currency: string;
+  value: number;
+}
+
 /**
  * The amount rules of "Format the amount value": three-decimal currencies must
  * end in 0, CLP in 00.
  */
-export function ToCurrencyRule(currency: unknown, amount: unknown): void {
-  if (typeof currency !== "string" || currency.length !== 3) {
+export function ParseAmount(
+  currency: JsonValue | undefined,
+  amount: JsonValue | undefined,
+): Amount {
+  if (!isText(currency) || currency.length !== 3) {
     throw new SimError(Problem("currency_required"));
   }
-  if (typeof amount !== "number" || !Number.isInteger(amount) || amount < 0) {
+  if (!isCount(amount) || !Number.isInteger(amount) || amount < 0) {
     throw new SimError(Problem("amount_invalid"));
   }
   const code = currency.toUpperCase();
@@ -74,6 +84,7 @@ export function ToCurrencyRule(currency: unknown, amount: unknown): void {
   if (WHOLE_HUNDREDS.has(code) && amount % 100 !== 0) {
     throw new SimError(Problem("amount_invalid"));
   }
+  return { currency, value: amount };
 }
 
 export function NewContext(state: SimState, baseUrl: string): SimContext {

@@ -14,6 +14,7 @@ import { CurrentStandIn } from "./standin";
 import { TranslateError } from "../implementations/payment/errors";
 import {
   CkoApiError,
+  type CkoErrorBody,
   CkoTransportError,
 } from "../implementations/payment/http";
 import {
@@ -33,27 +34,28 @@ function apiError(
   codes: string[] = [],
   type?: string,
 ): CkoApiError {
-  return new CkoApiError(status, {
-    request_id: "suite",
-    error_codes: codes,
-    ...(type ? { error_type: type } : {}),
-  });
+  const body: CkoErrorBody = { request_id: "suite", error_codes: codes };
+  if (type) body.error_type = type;
+  return new CkoApiError(status, body);
 }
 
-function assertRetryable(error: unknown, label: string): void {
-  assert.ok(error instanceof PaymentError, `${label} must stay a PaymentError`);
+function assertRetryable(
+  cause: unknown,
+  label: string,
+): asserts cause is PaymentError {
+  assert.ok(cause instanceof PaymentError, `${label} must stay a PaymentError`);
   assert.equal(
-    error instanceof InvalidPaymentStateError,
+    cause instanceof InvalidPaymentStateError,
     false,
     `${label} is not a refusal`,
   );
   assert.equal(
-    error instanceof PaymentNotFoundError,
+    cause instanceof PaymentNotFoundError,
     false,
     `${label} is not a not-found`,
   );
   assert.equal(
-    error instanceof CustomerNotFoundError,
+    cause instanceof CustomerNotFoundError,
     false,
     `${label} is not a not-found`,
   );
@@ -134,7 +136,7 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
       ACTION_CONTEXT,
     );
     assertRetryable(malformed, "currency_invalid");
-    assert.equal((malformed as PaymentError).providerCode, "currency_invalid");
+    assert.equal(malformed.providerCode, "currency_invalid");
   });
 
   it("reads unknown customers and instruments as not found", () => {
@@ -163,7 +165,7 @@ describe("[checkout-com] outages on the wire", function () {
     const payment = await charged();
     standIn.injectFault({ kind: "status", status: 503 }, 2);
     const error = await RefundPayment({ payment }, key()).catch(
-      (caught: unknown) => caught,
+      (cause: unknown) => cause,
     );
     assertRetryable(error, "a 503 on refund");
   });
@@ -173,10 +175,10 @@ describe("[checkout-com] outages on the wire", function () {
     const payment = await charged();
     standIn.injectFault({ kind: "drop" });
     const error = await CapturePayment(payment, key()).catch(
-      (caught: unknown) => caught,
+      (cause: unknown) => cause,
     );
     assertRetryable(error, "a dropped connection");
-    assert.equal((error as PaymentError).providerCode, "unreachable");
+    assert.equal(error.providerCode, "unreachable");
   });
 
   it("keeps a 429 on a payment retryable", async function () {
@@ -191,7 +193,7 @@ describe("[checkout-com] outages on the wire", function () {
       },
     });
     const error = await GetPayment(`pay_${"a".repeat(26)}`).catch(
-      (caught: unknown) => caught,
+      (cause: unknown) => cause,
     );
     assertRetryable(error, "a 429");
   });
