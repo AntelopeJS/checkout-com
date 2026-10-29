@@ -11,7 +11,7 @@ The AntelopeJS module that implements `@antelopejs/interface-payment` on Checkou
 
 ## Versioning
 
-- `@antelopejs/interface-payment` (a dependency) and `@antelopejs/interface-subscriptions` (a devDependency) use `>=0.0.2 <0.1.0`. This module implements interface-payment, and a new minor may add functions it has to implement, so raise the upper bound only after implementing what that minor adds.
+- `@antelopejs/interface-payment` (a dependency) uses `>=0.1.0 <0.2.0` and `@antelopejs/interface-subscriptions` (a devDependency) uses `>=0.0.2 <0.1.0`. This module implements interface-payment, and a new minor may add functions it has to implement, so raise the upper bound only after implementing what that minor adds.
 - `src/test/fallback-module.ts` clones `@antelopejs/payment-subscriptions` at a pinned commit (its v0.0.2 release) for the renewal test. When you bump the interfaces, move that pin to a release built against the same interface versions.
 
 ## Tests
