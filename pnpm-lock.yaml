@@ -19,14 +19,17 @@ importers:
         specifier: ^1.17.1
         version: 1.17.1
       '@antelopejs/interface-database':
-        specifier: ^0.1.8
-        version: 0.1.8(@antelopejs/interface-core@0.1.1)
+        specifier: ^0.2.0
+        version: 0.2.0(@antelopejs/interface-core@0.1.1)
       '@antelopejs/interface-subscriptions':
-        specifier: '>=0.0.2 <0.1.0'
-        version: 0.0.2(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))
+        specifier: '>=0.1.0 <1.0.0'
+        version: 0.1.0(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))
       '@antelopejs/mongodb':
-        specifier: ^1.4.0
-        version: 1.4.0(socks@2.8.10)
+        specifier: ^1.6.0
+        version: 1.6.0(socks@2.8.10)
+      '@antelopejs/payment-subscriptions':
+        specifier: 0.0.3
+        version: 0.0.3
       '@antelopejs/tooling-configs':
         specifier: ^0.2.11
         version: 0.2.11(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))
@@ -83,27 +86,46 @@ packages:
   '@antelopejs/interface-core@0.2.6':
     resolution: {integrity: sha512-PJp58D1snKLVEmpfn9Yj2htuohZhUxHqyyec3xtkPPy61mtACs0YznnhcgbYQNhIy/q8J+lSwDICPZIsKjhAIA==}
 
-  '@antelopejs/interface-database@0.1.8':
-    resolution: {integrity: sha512-0u3jYG3/0KBD1D0Ls6ckgP9TUKBBtfClWXJfJZpvjx7QDVrUCao/H9Ud9Uia2+WrvrfBPjP3kFXhgSMCzXJdkg==}
+  '@antelopejs/interface-database-catalog@0.0.3':
+    resolution: {integrity: sha512-ZT7bZ0ycEs8VvEgNGQTGMAzKiFQC1BOYOM2f2e+vFuCN/1VPBZZFxg3XOmHClTzdW/RzX2k7lasfMyaVOUzOCA==}
     peerDependencies:
-      '@antelopejs/interface-core': '>=0.1.1 <1.0.0'
+      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-mongodb@0.0.5':
-    resolution: {integrity: sha512-2cNS8p/A0lTfXOb1T9stihbSQasUyZPbJPkAtACHL61eYZ+YDayo93nmS4kPp/UicRGNRWqGAvknx41NUOW1nA==}
+  '@antelopejs/interface-database@0.2.0':
+    resolution: {integrity: sha512-ls+z8LNsoE01YzFZLEIvrhF/LHFVrntlfxZm30cVnT4Rcm5NsdCBxthHJNjkLdYRB3Ex71IFWSa1Q6O8oRDZ+A==}
+    peerDependencies:
+      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
+
+  '@antelopejs/interface-mongodb@0.0.6':
+    resolution: {integrity: sha512-jNb6fVIMQFFTkUnaY4KrSdA5JknmUCpnjIMC6/GuN8wEoUbo/LBZGq7q1Kz1IGcNpiByRbWHvDVW9J693i1kFw==}
 
   '@antelopejs/interface-payment@0.1.0':
     resolution: {integrity: sha512-n3AfzR73ApPqhRw/iHVWf7A9jadHCSLDTrSDnyGsxqG1ydYEaUfPjfIX56PU1RsrPi8O+FXCiYZcuG8jdEL2Mw==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.3 <1.0.0'
 
-  '@antelopejs/interface-subscriptions@0.0.2':
-    resolution: {integrity: sha512-ineU+bO4dpeP7nv52mV+klnTzUNmzktXPF/y6PQ3T0KqTOg1awl2OWkOnN4ULvOCvih3SG/zor/QOWWLPhQriw==}
+  '@antelopejs/interface-redis-scheduler@0.0.9':
+    resolution: {integrity: sha512-cjMgKmJFrjzo0ZcA+08tiPH+KrAWRJQr2f+k51srbf7pApPcPgW7y96N53OKdxadD9FZw+UxYJIJcFM1nw8CBw==}
+    peerDependencies:
+      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
+      '@antelopejs/interface-redis': '>=0.0.9 <1.0.0'
+
+  '@antelopejs/interface-redis@0.0.9':
+    resolution: {integrity: sha512-lI1zcm2J13tP4D/QKmsdKFBRIzjZ/GdG4z27uaOp/3yKPA3RkH5YgpzFm9pgBa353UIhgZDuVkozFJcFkqewUA==}
+    peerDependencies:
+      '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
+
+  '@antelopejs/interface-subscriptions@0.1.0':
+    resolution: {integrity: sha512-FFFZrg5eG6Gflv77Dw1LU696uVC6gyJC11FnjPv1y4GU9fXLLe4MBFP0I83hJKHN1jq+ytBdAxSAa7B/aV4ptQ==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.5 <1.0.0'
       '@antelopejs/interface-payment': '>=0.0.2 <1.0.0'
 
-  '@antelopejs/mongodb@1.4.0':
-    resolution: {integrity: sha512-Y70RDJk/e1wCsw5I/cayVEWcN9uO+uk0Ehu52wXXOCBgBlRfIZq5Hg+KrRKRstbfv8G1tLiHUhQl5WiTtxiLMQ==}
+  '@antelopejs/mongodb@1.6.0':
+    resolution: {integrity: sha512-HKPw1FC+NDqHe0B7ceEUGpbH8oOg9AcdEhcBjSnBwrmf0Z0hWwn2T95p0hEcW3TunaFRoueAJsQjSdUqdckSFA==}
+
+  '@antelopejs/payment-subscriptions@0.0.3':
+    resolution: {integrity: sha512-Jr0RtAAHJVyGBG0aaBKNBL06va4LccdGb3zcWmgDqmjjd8fzLaqxE9+vv2WiCnp3En3OWQO6r3jGydn86TcTHg==}
 
   '@antelopejs/tooling-configs@0.2.11':
     resolution: {integrity: sha512-11reej4rSQuPEQqQgef60SyQZ8XGWlUSshD4RXLXPBpyFGVQmOqagKmj1zTg8QAktzwxxokhk/8JrIyChIv3LA==}
@@ -333,6 +355,9 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
+
+  '@ioredis/commands@1.10.0':
+    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1240,6 +1265,10 @@ packages:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
 
+  cluster-key-slot@1.1.1:
+    resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
+    engines: {node: '>=0.10.0'}
+
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
     engines: {node: '>=7.0.0'}
@@ -1332,6 +1361,10 @@ packages:
   degenerator@5.0.1:
     resolution: {integrity: sha512-TllpMR/t0M5sqCXfj85i4XaAzxmS5tVA16dqvdkMwGmzI+dXLXnw3J+3Vdv7VKw+ThlTMboK6i9rnZ6Nntj5CQ==}
     engines: {node: '>= 14'}
+
+  denque@2.1.0:
+    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
+    engines: {node: '>=0.10'}
 
   destr@2.0.5:
     resolution: {integrity: sha512-ugFTXCtDZunbzasqBxrK93Ik/DRYsO6S/fedkWEMKqt04xZ4csmnmwGDBAb07QWNaGMAmnTIemsYZCksjATwsA==}
@@ -1679,6 +1712,10 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
+
+  ioredis@5.11.1:
+    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
+    engines: {node: '>=12.22.0'}
 
   ip-address@10.7.3:
     resolution: {integrity: sha512-A1kdq/tSb5QjvKvAMgIoEvDBIgL7qaqVP/jkvSwYYRZ9iEzvPpopxp2wQfu3SuZRHtpHNxMn8Fs0bS+gf5Xmwg==}
@@ -2367,6 +2404,14 @@ packages:
     resolution: {integrity: sha512-Kko+Y5XQ6fM+Ce3dq3m9YGxnacYZYl9cA1wZjaF3Vbry2L3i1qVg8+CAgNPsXRArPMUMCaOR7oa9Nqntc43JKA==}
     engines: {node: '>= 20.19.0'}
 
+  redis-errors@1.2.0:
+    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
+    engines: {node: '>=4'}
+
+  redis-parser@3.0.0:
+    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
+    engines: {node: '>=4'}
+
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
@@ -2487,6 +2532,9 @@ packages:
 
   sparse-bitfield@3.0.3:
     resolution: {integrity: sha512-kvzhi7vqKTfkh0PZU+2D2PIllw2ymqJKujUcyPMd9Y75Nv4nPbGJZXNhxsgdQab2BmlDct1YnfQCguEvHr7VsQ==}
+
+  standard-as-callback@2.1.0:
+    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
@@ -2793,11 +2841,19 @@ snapshots:
     dependencies:
       reflect-metadata: 0.2.2
 
-  '@antelopejs/interface-database@0.1.8(@antelopejs/interface-core@0.1.1)':
+  '@antelopejs/interface-database-catalog@0.0.3(@antelopejs/interface-core@0.2.6)':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+
+  '@antelopejs/interface-database@0.2.0(@antelopejs/interface-core@0.1.1)':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
 
-  '@antelopejs/interface-mongodb@0.0.5(socks@2.8.10)':
+  '@antelopejs/interface-database@0.2.0(@antelopejs/interface-core@0.2.6)':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+
+  '@antelopejs/interface-mongodb@0.0.6(socks@2.8.10)':
     dependencies:
       mongodb: 6.21.0(socks@2.8.10)
     transitivePeerDependencies:
@@ -2808,26 +2864,55 @@ snapshots:
       - mongodb-client-encryption
       - snappy
       - socks
+    optional: true
 
   '@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1)':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
 
-  '@antelopejs/interface-subscriptions@0.0.2(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))':
+  '@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.2.6)':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+
+  '@antelopejs/interface-redis-scheduler@0.0.9(@antelopejs/interface-core@0.2.6)(@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.2.6))':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.2.6)
+      ioredis: 5.11.1
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
+  '@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.2.6)':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+      ioredis: 5.11.1
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
+  '@antelopejs/interface-subscriptions@0.1.0(@antelopejs/interface-core@0.1.1)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))':
     dependencies:
       '@antelopejs/interface-core': 0.1.1
       '@antelopejs/interface-payment': 0.1.0(@antelopejs/interface-core@0.1.1)
 
-  '@antelopejs/mongodb@1.4.0(socks@2.8.10)':
+  '@antelopejs/interface-subscriptions@0.1.0(@antelopejs/interface-core@0.2.6)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))':
     dependencies:
-      '@antelopejs/interface-core': 0.1.1
-      '@antelopejs/interface-database': 0.1.8(@antelopejs/interface-core@0.1.1)
-      '@antelopejs/interface-mongodb': 0.0.5(socks@2.8.10)
+      '@antelopejs/interface-core': 0.2.6
+      '@antelopejs/interface-payment': 0.1.0(@antelopejs/interface-core@0.1.1)
+
+  '@antelopejs/mongodb@1.6.0(socks@2.8.10)':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+      '@antelopejs/interface-database': 0.2.0(@antelopejs/interface-core@0.2.6)
+      '@antelopejs/interface-database-catalog': 0.0.3(@antelopejs/interface-core@0.2.6)
       chai: 4.5.0
       mongodb: 6.21.0(socks@2.8.10)
       randomstring: 1.3.2
       reflect-metadata: 0.2.2
       uuid: 11.1.1
+    optionalDependencies:
+      '@antelopejs/interface-mongodb': 0.0.6(socks@2.8.10)
     transitivePeerDependencies:
       - '@aws-sdk/credential-providers'
       - '@mongodb-js/zstd'
@@ -2836,6 +2921,18 @@ snapshots:
       - mongodb-client-encryption
       - snappy
       - socks
+
+  '@antelopejs/payment-subscriptions@0.0.3':
+    dependencies:
+      '@antelopejs/interface-core': 0.2.6
+      '@antelopejs/interface-database': 0.2.0(@antelopejs/interface-core@0.2.6)
+      '@antelopejs/interface-payment': 0.1.0(@antelopejs/interface-core@0.2.6)
+      '@antelopejs/interface-subscriptions': 0.1.0(@antelopejs/interface-core@0.2.6)(@antelopejs/interface-payment@0.1.0(@antelopejs/interface-core@0.1.1))
+    optionalDependencies:
+      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.2.6)
+      '@antelopejs/interface-redis-scheduler': 0.0.9(@antelopejs/interface-core@0.2.6)(@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.2.6))
+    transitivePeerDependencies:
+      - supports-color
 
   '@antelopejs/tooling-configs@0.2.11(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))':
     dependencies:
@@ -3059,6 +3156,9 @@ snapshots:
   '@inquirer/type@3.0.10(@types/node@22.20.5)':
     optionalDependencies:
       '@types/node': 22.20.5
+
+  '@ioredis/commands@1.10.0':
+    optional: true
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -3791,6 +3891,9 @@ snapshots:
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
 
+  cluster-key-slot@1.1.1:
+    optional: true
+
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
@@ -3859,6 +3962,9 @@ snapshots:
       ast-types: 0.13.4
       escodegen: 2.1.0
       esprima: 4.0.1
+
+  denque@2.1.0:
+    optional: true
 
   destr@2.0.5: {}
 
@@ -4249,6 +4355,19 @@ snapshots:
       rxjs: 7.8.2
     optionalDependencies:
       '@types/node': 22.20.5
+
+  ioredis@5.11.1:
+    dependencies:
+      '@ioredis/commands': 1.10.0
+      cluster-key-slot: 1.1.1
+      debug: 4.4.3(supports-color@8.1.1)
+      denque: 2.1.0
+      redis-errors: 1.2.0
+      redis-parser: 3.0.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
 
   ip-address@10.7.3: {}
 
@@ -5000,6 +5119,14 @@ snapshots:
 
   readdirp@5.1.1: {}
 
+  redis-errors@1.2.0:
+    optional: true
+
+  redis-parser@3.0.0:
+    dependencies:
+      redis-errors: 1.2.0
+    optional: true
+
   reflect-metadata@0.2.2: {}
 
   release-it-changelogen@0.1.0(changelogen@0.5.7)(release-it@19.2.4(@types/node@22.20.5))(semver@7.8.5):
@@ -5123,6 +5250,9 @@ snapshots:
   sparse-bitfield@3.0.3:
     dependencies:
       memory-pager: 1.5.0
+
+  standard-as-callback@2.1.0:
+    optional: true
 
   std-env@3.10.0: {}
 
