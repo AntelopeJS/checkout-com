@@ -13,11 +13,11 @@ The AntelopeJS module that implements `@antelopejs/interface-payment` on Checkou
 
 - `@antelopejs/interface-payment` (a dependency) uses `>=0.1.0 <0.2.0`. This module implements interface-payment, and a new minor may add functions it has to implement, so raise the upper bound only after implementing what that minor adds.
 - `@antelopejs/interface-subscriptions` (a devDependency, only called by the tests) uses `>=0.1.0 <1.0.0`: this module does not implement it, so the range admits every release up to the next breaking one.
-- `src/test/fallback-module.ts` clones `@antelopejs/payment-subscriptions` at a pinned commit (the head of its pull request that adopts `@antelopejs/interface-subscriptions` 0.1.0, to be replaced by the release that ships it) for the renewal test. When you bump the interfaces, move that pin to a release built against the same interface versions.
+- `@antelopejs/payment-subscriptions` (a devDependency, loaded by the renewal test) is pinned to an exact version. When you bump the interfaces, move it to a release built against the same interface versions.
 
 ## Tests
 
-- `pnpm test` builds `dist` once, then runs `ajs module test .` (the `ajs` CLI comes from the `@antelopejs/core` devDependency). The setup starts the stand-in and an in-memory MongoDB 8.0.8, and clones and builds `payment-subscriptions` under `.antelope/` on first run, so the first run needs network access.
+- `pnpm test` builds `dist` once, then runs `ajs module test .` (the `ajs` CLI comes from the `@antelopejs/core` devDependency). The setup starts the stand-in and an in-memory MongoDB 8.0.8, and loads the installed `@antelopejs/payment-subscriptions` for the renewal test. The first run downloads the MongoDB binary, so it needs network access.
 - Without `CKO_SECRET_KEY` and `CKO_PROCESSING_CHANNEL_ID`, the suites run against the stand-in. CI sets neither, so it runs the stand-in.
 - CI never runs the live suite against Checkout.com's sandbox, and `pnpm run checks` runs it only if both keys are exported. Run it with `CKO_SECRET_KEY=sk_sbox_… CKO_PROCESSING_CHANNEL_ID=pc_… pnpm test`, adding `CKO_BASE_URL` and `CKO_PUBLIC_KEY` as `docs/5.testing.md` describes. A production key is refused. Live, the stand-in-only tests are skipped.
 - `src/test/exclusions.test.ts` skips two conformance tests by name in every run; `customers.test.ts` and `saved-methods.test.ts` cover the same flows.
