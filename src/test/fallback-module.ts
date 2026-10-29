@@ -3,7 +3,7 @@ import { existsSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const REMOTE = "https://github.com/AntelopeJS/payment-subscriptions.git";
-const COMMIT = "ee50c17d90e0467dc4094208b82f34a3aa41113f";
+const COMMIT = "c4d33b0ca08372e055ee514220f19ed77fb2e913";
 const FOLDER = `.antelope/payment-subscriptions-${COMMIT.slice(0, 7)}`;
 const BUILT_ENTRY = "dist/index.js";
 const OWN_DEPENDENCIES = "node_modules";
@@ -20,8 +20,9 @@ function build(folder: string, root: string): void {
 }
 
 /**
- * Prepares `@antelopejs/payment-subscriptions` at the pinned commit (its
- * v0.0.2 release) for the renewal test, and returns where it is.
+ * Prepares `@antelopejs/payment-subscriptions` at the pinned commit (the head
+ * of its pull request that adopts `@antelopejs/interface-subscriptions` 0.1.0)
+ * for the renewal test, and returns where it is.
  *
  * The built module is then stripped of its own dependencies, so that it
  * resolves every interface from this repository's install. The core does not
