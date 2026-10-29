@@ -1,3 +1,5 @@
+import { isObject } from "./raw";
+
 export interface Target {
   baseUrl: string;
   secretKey: string;
@@ -13,6 +15,38 @@ interface InstrumentResponse {
   id: string;
 }
 
+interface TokenRequest {
+  type: "card";
+  number: string;
+  expiry_month: number;
+  expiry_year: number;
+  cvv: string;
+}
+
+interface InstrumentRequest {
+  type: "token";
+  token: string;
+  customer?: { id: string };
+}
+
+function isTokenResponse(body: unknown): body is TokenResponse {
+  return isObject(body) && "token" in body && typeof body.token === "string";
+}
+
+function isInstrumentResponse(body: unknown): body is InstrumentResponse {
+  return isObject(body) && "id" in body && typeof body.id === "string";
+}
+
+function testCard(cardNumber: string): TokenRequest {
+  return {
+    type: "card",
+    number: cardNumber,
+    expiry_month: TEST_EXPIRY_MONTH,
+    expiry_year: new Date().getFullYear() + TEST_EXPIRY_YEARS_AHEAD,
+    cvv: "100",
+  };
+}
+
 const TEST_EXPIRY_MONTH = 12;
 const TEST_EXPIRY_YEARS_AHEAD = 3;
 
@@ -20,7 +54,8 @@ async function post<T>(
   target: Target,
   path: string,
   key: string,
-  body: unknown,
+  body: TokenRequest | InstrumentRequest,
+  isExpected: (answer: unknown) => answer is T,
 ): Promise<T> {
   const response = await fetch(new URL(path, target.baseUrl), {
     method: "POST",
@@ -35,7 +70,11 @@ async function post<T>(
       `${path} answered ${response.status}: ${await response.text()}`,
     );
   }
-  return (await response.json()) as T;
+  const answer: unknown = await response.json();
+  if (!isExpected(answer)) {
+    throw new Error(`${path} answered an unexpected body`);
+  }
+  return answer;
 }
 
 /**
@@ -52,27 +91,21 @@ export async function MintInstrument(
   if (!target.publicKey) {
     throw new Error("Minting a test instrument needs a public key");
   }
-  const { token } = await post<TokenResponse>(
+  const { token } = await post(
     target,
     "/tokens",
     target.publicKey,
-    {
-      type: "card",
-      number: cardNumber,
-      expiry_month: TEST_EXPIRY_MONTH,
-      expiry_year: new Date().getFullYear() + TEST_EXPIRY_YEARS_AHEAD,
-      cvv: "100",
-    },
+    testCard(cardNumber),
+    isTokenResponse,
   );
-  const { id } = await post<InstrumentResponse>(
+  const instrument: InstrumentRequest = { type: "token", token };
+  if (customer) instrument.customer = { id: customer };
+  const { id } = await post(
     target,
     "/instruments",
     target.secretKey,
-    {
-      type: "token",
-      token,
-      ...(customer ? { customer: { id: customer } } : {}),
-    },
+    instrument,
+    isInstrumentResponse,
   );
   return id;
 }
@@ -85,17 +118,12 @@ export async function MintToken(
   if (!target.publicKey) {
     throw new Error("Minting a test token needs a public key");
   }
-  const { token } = await post<TokenResponse>(
+  const { token } = await post(
     target,
     "/tokens",
     target.publicKey,
-    {
-      type: "card",
-      number: cardNumber,
-      expiry_month: TEST_EXPIRY_MONTH,
-      expiry_year: new Date().getFullYear() + TEST_EXPIRY_YEARS_AHEAD,
-      cvv: "100",
-    },
+    testCard(cardNumber),
+    isTokenResponse,
   );
   return token;
 }

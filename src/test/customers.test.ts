@@ -8,11 +8,8 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { CurrentStandIn } from "./standin";
+import { isCustomer } from "./raw";
 import { ReadRaw, SUITE_TIMEOUT, email, key } from "./support";
-
-interface CustomerView {
-  metadata?: Record<string, unknown>;
-}
 
 describe("[checkout-com] customers", function () {
   this.timeout(SUITE_TIMEOUT);
@@ -22,7 +19,7 @@ describe("[checkout-com] customers", function () {
       ({ path }) => path === "/customers",
     ).length;
     const error = await CreateCustomer({ name: "No Email" }, key()).catch(
-      (caught: unknown) => caught,
+      (cause: unknown) => cause,
     );
     assert.ok(error instanceof PaymentError);
     assert.equal(error.providerCode, "email_required");
@@ -54,7 +51,7 @@ describe("[checkout-com] customers", function () {
       idempotencyKey,
     );
     assert.equal(replay.id, first.id);
-    const raw = await ReadRaw<CustomerView>(`/customers/${first.id}`);
+    const raw = await ReadRaw(`/customers/${first.id}`, isCustomer);
     assert.ok(
       raw.metadata?.antelope_idempotency,
       "the key's fingerprint is kept on the customer",
@@ -65,7 +62,7 @@ describe("[checkout-com] customers", function () {
     const address = email();
     await CreateCustomer({ email: address }, key());
     const error = await CreateCustomer({ email: address }, key()).catch(
-      (caught: unknown) => caught,
+      (cause: unknown) => cause,
     );
     assert.ok(error instanceof PaymentError);
     assert.equal(error.providerCode, "customer_email_already_exists");

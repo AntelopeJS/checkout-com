@@ -1,8 +1,11 @@
 import path from "node:path";
 import { MongoMemoryServer } from "mongodb-memory-server-core";
-import { defineConfig } from "@antelopejs/interface-core/config";
+import {
+  type AntelopeConfig,
+  defineConfig,
+} from "@antelopejs/interface-core/config";
 
-import { DefaultBaseUrl } from "../config";
+import { type Config, DefaultBaseUrl } from "../config";
 import { MintInstrument, type Target } from "./mint";
 import { PrepareFallbackModule } from "./fallback-module";
 import { type LiveEnvironment, ResolveEnvironment } from "./environment";
@@ -29,14 +32,13 @@ let standIn: StandIn | undefined;
 let mongod: MongoMemoryServer | undefined;
 
 function liveTarget(environment: LiveEnvironment): Target {
-  return {
+  const target: Target = {
     baseUrl: environment.baseUrl ?? DefaultBaseUrl(environment.secretKey),
     secretKey: environment.secretKey,
     processingChannelId: environment.processingChannelId,
-    ...(process.env.CKO_PUBLIC_KEY
-      ? { publicKey: process.env.CKO_PUBLIC_KEY }
-      : {}),
   };
+  if (process.env.CKO_PUBLIC_KEY) target.publicKey = process.env.CKO_PUBLIC_KEY;
+  return target;
 }
 
 async function standInTarget(): Promise<Target> {
@@ -68,7 +70,7 @@ async function mintTestMethods(target: Target): Promise<void> {
   );
 }
 
-function accountConfig(target: Target): Record<string, unknown> {
+function accountConfig(target: Target): Config {
   const account = {
     secretKey: target.secretKey,
     processingChannelId: target.processingChannelId,
@@ -100,7 +102,9 @@ function exposeTarget(target: Target, mode: string): void {
   });
 }
 
-function fallbackModules(mongoUrl: string): Record<string, unknown> {
+function fallbackModules(
+  mongoUrl: string,
+): NonNullable<AntelopeConfig["modules"]> {
   return {
     mongodb: {
       source: { type: "local", path: "node_modules/@antelopejs/mongodb" },

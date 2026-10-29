@@ -12,7 +12,12 @@ import { GetAccount } from "./accounts";
 import type { CkoClient } from "./http";
 import { ToPaymentMethod } from "./mapping";
 import { AssertCustomerId, AssertInstrumentId } from "./ids";
-import type { CkoCreated, CkoCustomer, CkoMetadata } from "./cko-types";
+import type {
+  CkoCreated,
+  CkoCustomer,
+  CkoCustomerRequest,
+  CkoMetadata,
+} from "./cko-types";
 import {
   IdempotencyMetadataKey,
   IsInternalCustomerKey,
@@ -35,20 +40,25 @@ function callerMetadata(
 
 function toCustomer(customer: CkoCustomer): Customer {
   const metadata = callerMetadata(customer.metadata);
-  return {
-    id: customer.id,
-    ...(customer.email ? { email: customer.email } : {}),
-    ...(customer.name ? { name: customer.name } : {}),
-    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
-  };
+  const read: Customer = { id: customer.id };
+  if (customer.email) {
+    read.email = customer.email;
+  }
+  if (customer.name) {
+    read.name = customer.name;
+  }
+  if (Object.keys(metadata).length > 0) {
+    read.metadata = metadata;
+  }
+  return read;
 }
 
 function keyFingerprint(idempotencyKey: string): string {
   return createHash("sha256").update(idempotencyKey).digest("hex");
 }
 
-function isEmailTaken(error: unknown): boolean {
-  return error instanceof CkoApiError && error.errorCodes.includes(EMAIL_TAKEN);
+function isEmailTaken(cause: unknown): boolean {
+  return cause instanceof CkoApiError && cause.errorCodes.includes(EMAIL_TAKEN);
 }
 
 /**
@@ -93,16 +103,16 @@ export async function CreateCustomer(
     ...request.metadata,
     [IdempotencyMetadataKey()]: fingerprint,
   };
+  const sent: CkoCustomerRequest = { email, metadata };
+  if (request.name) {
+    sent.name = request.name;
+  }
   return Translating("", CUSTOMER_ENTITY, async () => {
     try {
       const { body } = await client.send<CkoCreated>({
         method: "POST",
         path: "/customers",
-        body: {
-          email,
-          metadata,
-          ...(request.name ? { name: request.name } : {}),
-        },
+        body: sent,
       });
       return toCustomer({ id: body.id, email, name: request.name, metadata });
     } catch (error) {

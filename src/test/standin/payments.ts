@@ -4,7 +4,14 @@ import type { StandInReply, StandInRequest } from "./server";
 import refundAcceptedFixture from "./fixtures/refund-202.json";
 import { type CardBehaviour, CardOutcome, NotEnrolled } from "./cards";
 import refundDeclinedFixture from "./fixtures/refund-422-declined.json";
-import { Problem, type SimContext, SimError, ToCurrencyRule } from "./context";
+import {
+  type Amount,
+  Problem,
+  type SimContext,
+  SimError,
+  ParseAmount,
+} from "./context";
+import { type JsonObject, CountOf, MetadataOf, ObjectOf, TextOf } from "./wire";
 import {
   PaymentAccepted,
   PaymentActions,
@@ -13,7 +20,6 @@ import {
 } from "./views";
 import {
   EmptyBalances,
-  type Metadata,
   NewId,
   type SimAction,
   type SimInstrument,
@@ -35,8 +41,6 @@ const FAILED_AUTHENTICATION: CardBehaviour = {
 };
 const SELF_STORING_TYPES = new Set(["Recurring", "Installment", "Unscheduled"]);
 
-type Body = Record<string, unknown>;
-
 function now(): string {
   return new Date().toISOString();
 }
@@ -53,53 +57,54 @@ function action(type: string, amount: number, approved = true): SimAction {
   };
 }
 
-function assertInitiation(context: SimContext, body: Body): void {
-  const paymentType = (body.payment_type as string | undefined) ?? REGULAR;
+function assertInitiation(context: SimContext, body: JsonObject): void {
+  const paymentType = TextOf(body.payment_type) ?? REGULAR;
   if (body.merchant_initiated === true && paymentType === REGULAR) {
     throw new SimError(Problem("payment_type_invalid"));
   }
-  const previous = body.previous_payment_id as string | undefined;
+  const previous = TextOf(body.previous_payment_id);
   if (previous && !context.state.payments.has(previous)) {
     throw new SimError(Problem("previous_payment_id_invalid"));
   }
 }
 
-function isThreeDsRequested(body: Body): boolean {
-  const threeDs = body["3ds"] as Body | undefined;
+function isThreeDsRequested(body: JsonObject): boolean {
+  const threeDs = ObjectOf(body["3ds"]);
   return threeDs?.enabled === true || threeDs?.enabled === "true";
 }
 
-function needsChallenge(behaviour: CardBehaviour, body: Body): boolean {
+function needsChallenge(behaviour: CardBehaviour, body: JsonObject): boolean {
   if (behaviour.threeDs === "upgrade") return true;
   return behaviour.threeDs === "challenge" && isThreeDsRequested(body);
 }
 
-function decide(behaviour: CardBehaviour, body: Body): CardBehaviour {
+function decide(behaviour: CardBehaviour, body: JsonObject): CardBehaviour {
   return behaviour.threeDs === "not_enabled" && isThreeDsRequested(body)
     ? NotEnrolled()
     : behaviour;
 }
 
 function newPayment(
-  body: Body,
+  body: JsonObject,
+  money: Amount,
   instrument: SimInstrument | undefined,
   customer: string | undefined,
 ): SimPayment {
   const payment: SimPayment = {
     id: NewId("pay"),
-    amount: body.amount as number,
-    currency: body.currency as string,
+    amount: money.value,
+    currency: money.currency,
     status: "Pending",
     approved: false,
-    reference: body.reference as string | undefined,
-    description: body.description as string | undefined,
+    reference: TextOf(body.reference),
+    description: TextOf(body.description),
     requestedOn: now(),
     instrument: instrument?.id,
     customer: customer ?? instrument?.customer,
-    metadata: body.metadata as Metadata | undefined,
-    paymentType: (body.payment_type as string | undefined) ?? REGULAR,
+    metadata: MetadataOf(body.metadata),
+    paymentType: TextOf(body.payment_type) ?? REGULAR,
     isMerchantInitiated: body.merchant_initiated === true,
-    previousPaymentId: body.previous_payment_id as string | undefined,
+    previousPaymentId: TextOf(body.previous_payment_id),
     isAutoCapture: body.capture !== false,
     responseCode: "",
     responseSummary: "",
@@ -154,19 +159,24 @@ function authorize(
   }
 }
 
-/** `POST /payments`: authorization, 3DS by test card, MIT validation. */
-export function CreatePayment(
+/** A `POST /payments` that was accepted, and the answer it was given. */
+export interface SubmittedPayment {
+  payment: SimPayment;
+  reply: StandInReply;
+}
+
+/** The payment a `POST /payments` body asks for: authorization, 3DS by test card, MIT validation. */
+export function SubmitPayment(
   context: SimContext,
-  request: StandInRequest,
-): StandInReply {
-  const { body } = request;
-  ToCurrencyRule(body.currency, body.amount);
+  body: JsonObject,
+): SubmittedPayment {
+  const money = ParseAmount(body.currency, body.amount);
   assertInitiation(context, body);
   const isStoring =
-    SELF_STORING_TYPES.has(body.payment_type as string) &&
+    SELF_STORING_TYPES.has(TextOf(body.payment_type) ?? "") &&
     body.merchant_initiated !== true;
   const source = ResolveSource(context, body, isStoring);
-  const payment = newPayment(body, source.instrument, source.customer);
+  const payment = newPayment(body, money, source.instrument, source.customer);
   context.state.payments.set(payment.id, payment);
   const behaviour = CardOutcome(source.card, payment.amount);
   if (needsChallenge(behaviour, body)) {
@@ -174,16 +184,30 @@ export function CreatePayment(
     context.challenges.set(payment.id, { behaviour, commit: source.commit });
     source.commit(true);
     return {
-      status: ACCEPTED,
-      body: PaymentAccepted(context.state, payment, context.baseUrl),
+      payment,
+      reply: {
+        status: ACCEPTED,
+        body: PaymentAccepted(context.state, payment, context.baseUrl),
+      },
     };
   }
   authorize(context, payment, decide(behaviour, body));
   source.commit(payment.approved);
   return {
-    status: CREATED,
-    body: PaymentResponse(context.state, payment, context.baseUrl),
+    payment,
+    reply: {
+      status: CREATED,
+      body: PaymentResponse(context.state, payment, context.baseUrl),
+    },
   };
+}
+
+/** `POST /payments`. */
+export function CreatePayment(
+  context: SimContext,
+  request: StandInRequest,
+): StandInReply {
+  return SubmitPayment(context, request.body).reply;
 }
 
 /** The payer completing (or failing) the 3DS challenge of a 202 payment. */
@@ -226,12 +250,12 @@ function accepted(
   context: SimContext,
   payment: SimPayment,
   actionId: string,
-  fixture: unknown,
+  fixture: JsonObject,
 ): StandInReply {
   return {
     status: ACCEPTED,
     body: {
-      ...(structuredClone(fixture) as Body),
+      ...structuredClone(fixture),
       action_id: actionId,
       reference: payment.reference,
       _links: {
@@ -251,8 +275,7 @@ export function Capture(
   if (payment.status !== "Authorized")
     throw new SimError({ status: FORBIDDEN });
   const amount =
-    (request.body.amount as number | undefined) ??
-    payment.balances.available_to_capture;
+    CountOf(request.body.amount) ?? payment.balances.available_to_capture;
   if (amount > payment.balances.available_to_capture) {
     throw new SimError(Problem("capture_value_greater_than_authorized"));
   }
@@ -307,8 +330,7 @@ export function Refund(
     throw new SimError({ status: FORBIDDEN });
   }
   const amount =
-    (request.body.amount as number | undefined) ??
-    payment.balances.available_to_refund;
+    CountOf(request.body.amount) ?? payment.balances.available_to_refund;
   if (amount > payment.balances.available_to_refund) {
     throw new SimError(Problem("amount_exceeds_balance"));
   }
@@ -321,7 +343,7 @@ export function Refund(
   const refund: SimAction = {
     ...action("Refund", amount),
     approved: undefined,
-    metadata: request.body.metadata as Metadata | undefined,
+    metadata: MetadataOf(request.body.metadata),
   };
   payment.balances.available_to_refund -= amount;
   payment.actions.push(refund);

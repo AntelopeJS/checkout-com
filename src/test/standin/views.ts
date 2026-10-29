@@ -4,6 +4,7 @@ import actionsFixture from "./fixtures/payment-actions.json";
 import detailsFixture from "./fixtures/payment-details.json";
 import declinedFixture from "./fixtures/payment-201-declined.json";
 import redirectFixture from "./fixtures/payment-202-redirect.json";
+import { type JsonObject, ObjectOf } from "./wire";
 import type {
   SimAction,
   SimCustomer,
@@ -12,17 +13,14 @@ import type {
   SimState,
 } from "./state";
 
-type Body = Record<string, unknown>;
-
-function clone<T>(fixture: T): Body {
-  return structuredClone(fixture) as Body;
-}
-
-function link(baseUrl: string, path: string): Body {
+function link(baseUrl: string, path: string): JsonObject {
   return { href: `${baseUrl}${path}` };
 }
 
-function cardSource(instrument: SimInstrument, base: Body): Body {
+function cardSource(
+  instrument: SimInstrument,
+  base: JsonObject | undefined,
+): JsonObject {
   const { card } = instrument;
   return {
     ...base,
@@ -36,18 +34,18 @@ function cardSource(instrument: SimInstrument, base: Body): Body {
   };
 }
 
-function customerView(customer: SimCustomer | undefined): Body | undefined {
+function customerView(
+  customer: SimCustomer | undefined,
+): JsonObject | undefined {
   if (!customer) return undefined;
-  return {
-    id: customer.id,
-    email: customer.email,
-    ...(customer.name ? { name: customer.name } : {}),
-  };
+  const view: JsonObject = { id: customer.id, email: customer.email };
+  if (customer.name) view.name = customer.name;
+  return view;
 }
 
-function paymentLinks(baseUrl: string, payment: SimPayment): Body {
+function paymentLinks(baseUrl: string, payment: SimPayment): JsonObject {
   const path = `/payments/${payment.id}`;
-  const links: Body = {
+  const links: JsonObject = {
     self: link(baseUrl, path),
     actions: link(baseUrl, `${path}/actions`),
   };
@@ -63,15 +61,19 @@ function paymentLinks(baseUrl: string, payment: SimPayment): Body {
   return links;
 }
 
-function withParties(state: SimState, payment: SimPayment, body: Body): Body {
+function withParties(
+  state: SimState,
+  payment: SimPayment,
+  body: JsonObject,
+): JsonObject {
   const instrument = payment.instrument
     ? state.instruments.get(payment.instrument)
     : undefined;
   const customer = customerView(
     payment.customer ? state.customers.get(payment.customer) : undefined,
   );
-  const view: Body = { ...body };
-  if (instrument) view.source = cardSource(instrument, body.source as Body);
+  const view: JsonObject = { ...body };
+  if (instrument) view.source = cardSource(instrument, ObjectOf(body.source));
   if (!instrument) delete view.source;
   if (customer) view.customer = customer;
   if (!customer) delete view.customer;
@@ -83,11 +85,11 @@ export function PaymentResponse(
   state: SimState,
   payment: SimPayment,
   baseUrl: string,
-): Body {
+): JsonObject {
   const fixture = payment.approved ? paymentFixture : declinedFixture;
   const [authorization] = payment.actions;
-  const body: Body = {
-    ...clone(fixture),
+  const body: JsonObject = {
+    ...structuredClone(fixture),
     id: payment.id,
     action_id: authorization?.id,
     amount: payment.amount,
@@ -109,9 +111,9 @@ export function PaymentAccepted(
   state: SimState,
   payment: SimPayment,
   baseUrl: string,
-): Body {
-  const body: Body = {
-    ...clone(redirectFixture),
+): JsonObject {
+  const body: JsonObject = {
+    ...structuredClone(redirectFixture),
     id: payment.id,
     status: "Pending",
     reference: payment.reference,
@@ -131,9 +133,9 @@ export function PaymentDetails(
   state: SimState,
   payment: SimPayment,
   baseUrl: string,
-): Body {
-  const body: Body = {
-    ...clone(detailsFixture),
+): JsonObject {
+  const body: JsonObject = {
+    ...structuredClone(detailsFixture),
     id: payment.id,
     requested_on: payment.requestedOn,
     amount: payment.amount,
@@ -152,21 +154,21 @@ export function PaymentDetails(
   return withParties(state, payment, body);
 }
 
-/** `GET /payments/{id}/actions`, latest first, shaped as the docs' example. */
-export function PaymentActions(payment: SimPayment): Body[] {
-  const [shape] = actionsFixture;
+/** `GET /payments/{id}/actions`, latest first, as the docs' example shows. */
+export function PaymentActions(payment: SimPayment): JsonObject[] {
+  const [example] = actionsFixture;
   return [...payment.actions].reverse().map((action: SimAction) => {
-    const body: Body = {
-      ...clone(shape),
+    const body: JsonObject = {
+      ...structuredClone(example),
       approved: undefined,
       id: action.id,
       type: action.type,
       processed_on: action.processedOn,
       amount: action.amount,
-      ...(action.approved === undefined ? {} : { approved: action.approved }),
       response_code: action.responseCode,
       response_summary: action.responseSummary,
     };
+    if (action.approved !== undefined) body.approved = action.approved;
     if (action.metadata) body.metadata = { ...action.metadata };
     if (!action.metadata) delete body.metadata;
     return body;

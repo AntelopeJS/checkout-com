@@ -10,6 +10,7 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { CurrentStandIn } from "./standin";
+import { type JsonObject, ObjectOf, isText } from "./standin/wire";
 import { TEST_BILLING_COUNTRY, TEST_CARDS } from "./constants";
 import {
   RequireStandIn,
@@ -34,7 +35,7 @@ function session(
   };
 }
 
-function lastHostedRequest(): Record<string, unknown> | undefined {
+function lastHostedRequest(): JsonObject | undefined {
   const calls = CurrentStandIn()?.calls ?? [];
   return calls
     .filter(
@@ -64,9 +65,9 @@ describe("[checkout-com] hosted checkout", function () {
   it("refuses a session on an account with no billing country", async () => {
     await assert.rejects(
       () => CreateCheckoutSession(session(), key(), "secondary"),
-      (error: unknown) =>
-        error instanceof PaymentError &&
-        /checkoutBillingCountry/.test(error.message),
+      (cause: unknown) =>
+        cause instanceof PaymentError &&
+        /checkoutBillingCountry/.test(cause.message),
     );
   });
 
@@ -122,12 +123,8 @@ describe("[checkout-com] hosted checkout", function () {
     assert.deepEqual(sent?.payment_method_configuration, {
       card: { store_payment_details: "enabled" },
     });
-    const sentCustomer = sent?.customer as Record<string, unknown> | undefined;
-    assert.equal(
-      typeof sentCustomer?.email,
-      "string",
-      "the customer is named by email",
-    );
+    const sentCustomer = ObjectOf(sent?.customer);
+    assert.ok(isText(sentCustomer?.email), "the customer is named by email");
 
     standIn.payHostedPage(created.id, TEST_CARDS.approved);
     const read = await GetCheckoutSession(created.id);

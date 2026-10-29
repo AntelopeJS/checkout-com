@@ -13,7 +13,11 @@ import { Translating } from "./errors";
 import { GetAccount } from "./accounts";
 import { ReadActions, ReadPayment } from "./follow";
 import { AssertPaymentId, ParseRefundId } from "./ids";
-import type { CkoActionAccepted, CkoPayment } from "./cko-types";
+import type {
+  CkoActionAccepted,
+  CkoPayment,
+  CkoRefundRequest,
+} from "./cko-types";
 import { REFUND_REASON_KEY, ToRefund, WriteMetadata } from "./mapping";
 
 const REFUND_ENTITY = { entity: "payment" as const, forbiddenIsState: true };
@@ -48,16 +52,16 @@ export async function RefundPayment(
   const { client } = GetAccount(provider);
   return Translating(request.payment, REFUND_ENTITY, async () => {
     const payment = await ReadPayment(client, request.payment);
+    const sent: CkoRefundRequest = {
+      metadata: WriteMetadata(request.metadata, reasonMetadata(request.reason)),
+    };
+    if (request.amount) {
+      sent.amount = request.amount.value;
+    }
     const accepted = await client.send<CkoActionAccepted>({
       method: "POST",
       path: `/payments/${request.payment}/refunds`,
-      body: {
-        metadata: WriteMetadata(
-          request.metadata,
-          reasonMetadata(request.reason),
-        ),
-        ...(request.amount ? { amount: request.amount.value } : {}),
-      },
+      body: sent,
       idempotencyKey,
     });
     if (accepted.status === ALREADY_REFUNDED) {

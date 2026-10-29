@@ -12,6 +12,7 @@ import {
 import { MintInstrument } from "./mint";
 import { TEST_CARDS } from "./constants";
 import { CurrentStandIn } from "./standin";
+import type { JsonObject } from "./standin/wire";
 import {
   CardToken,
   SUITE_TIMEOUT,
@@ -28,7 +29,7 @@ const CHARGE = { value: 2500, currency: "EUR" };
 const RENEWAL = { value: 1000, currency: "EUR" };
 const METADATA_LIMIT = 20;
 
-function chargedPaymentRequests(): Record<string, unknown>[] {
+function chargedPaymentRequests(): JsonObject[] {
   return (CurrentStandIn()?.calls ?? [])
     .filter((call) => call.method === "POST" && call.path === "/payments")
     .map(({ body }) => body);

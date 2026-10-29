@@ -15,7 +15,14 @@ import { type Account, GetAccount } from "./accounts";
 import { TranslateError, Translating } from "./errors";
 import { FollowPayment, LoadPayment, ReadPayment } from "./follow";
 import { FindSavedMethod, RecordSavedMethod } from "./saved-methods";
-import type { CkoActionAccepted, CkoMetadata, CkoPayment } from "./cko-types";
+import { LookUp } from "./lookup";
+import type {
+  CkoActionAccepted,
+  CkoInitiation,
+  CkoPayment,
+  CkoPaymentRequest,
+  CkoPaymentSource,
+} from "./cko-types";
 import {
   AUTOMATIC_CAPTURE,
   CAPTURE_KEY,
@@ -30,29 +37,29 @@ const ACTION_ENTITY = { entity: "payment" as const, forbiddenIsState: true };
 const ALREADY_DONE = 200;
 const MANDATE_CHALLENGE = "challenge_requested_mandate";
 
-type SourceBuilder = (id: string, isSaving: boolean) => Record<string, unknown>;
+type SourceBuilder = (id: string, isSaving: boolean) => CkoPaymentSource;
 
 /**
  * A payment method reaches Checkout.com either as a single-use token from
  * Frames or Flow (`tok_…`) or as a stored instrument (`src_…`).
  */
-const SOURCE_BY_PREFIX: Record<string, SourceBuilder> = {
+const SOURCE_BY_PREFIX = {
   src: (id) => ({ type: "id", id }),
   tok: (token, isSaving) => ({
     type: "token",
     token,
     store_for_future_use: isSaving,
   }),
-};
+} satisfies Record<string, SourceBuilder>;
 
-function sourceOf(request: PaymentRequest): Record<string, unknown> {
+function sourceOf(request: PaymentRequest): CkoPaymentSource {
   const method = request.paymentMethod;
   if (!method) {
     throw new PaymentError(
       "Checkout.com needs a paymentMethod to create a payment: a token from Frames or Flow (tok_…) or a saved instrument (src_…)",
     );
   }
-  const build = SOURCE_BY_PREFIX[method.split("_")[0]];
+  const build = LookUp<SourceBuilder>(SOURCE_BY_PREFIX, method.split("_")[0]);
   if (!build) {
     throw new CustomerNotFoundError(method, "payment method");
   }
@@ -97,14 +104,17 @@ async function initialPaymentOf(
 async function initiation(
   account: Account,
   request: PaymentRequest,
-): Promise<Record<string, unknown>> {
+): Promise<CkoInitiation> {
   if (request.offSession) {
     const previous = await initialPaymentOf(account, request);
-    return {
+    const initiation: CkoInitiation = {
       merchant_initiated: true,
       payment_type: account.merchantInitiatedType,
-      ...(previous ? { previous_payment_id: previous } : {}),
     };
+    if (previous) {
+      initiation.previous_payment_id = previous;
+    }
+    return initiation;
   }
   if (request.savePaymentMethod) {
     return {
@@ -119,8 +129,8 @@ async function initiation(
 async function buildRequest(
   account: Account,
   request: PaymentRequest,
-): Promise<Record<string, unknown>> {
-  return {
+): Promise<CkoPaymentRequest> {
+  const sent: CkoPaymentRequest = {
     source: sourceOf(request),
     amount: request.amount.value,
     currency: request.amount.currency.toUpperCase(),
@@ -130,13 +140,18 @@ async function buildRequest(
     metadata: WriteMetadata(request.metadata, {
       [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
     }),
-    ...(request.description ? { description: request.description } : {}),
-    ...(request.customer ? { customer: { id: request.customer } } : {}),
-    ...(request.returnUrl
-      ? { success_url: request.returnUrl, failure_url: request.returnUrl }
-      : {}),
-    ...(await initiation(account, request)),
   };
+  if (request.description) {
+    sent.description = request.description;
+  }
+  if (request.customer) {
+    sent.customer = { id: request.customer };
+  }
+  if (request.returnUrl) {
+    sent.success_url = request.returnUrl;
+    sent.failure_url = request.returnUrl;
+  }
+  return { ...sent, ...(await initiation(account, request)) };
 }
 
 async function linkInstrument(
@@ -197,7 +212,7 @@ export async function CreatePayment(
       idempotencyKey,
     });
     const payment = ToPayment(
-      { ...body, metadata: body.metadata ?? (sent.metadata as CkoMetadata) },
+      { ...body, metadata: body.metadata ?? sent.metadata },
       { requested: request.amount },
     );
     await rememberSavedMethod(account, request, payment);

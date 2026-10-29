@@ -13,6 +13,7 @@ import {
   VerifyWebhook,
 } from "@antelopejs/interface-payment";
 
+import { isActions } from "./raw";
 import { TEST_CARDS, TEST_WEBHOOK_KEY } from "./constants";
 import capturedFixture from "./standin/fixtures/payment_captured.json";
 import {
@@ -27,18 +28,12 @@ import {
   reference,
 } from "./support";
 
-interface ActionView {
-  id: string;
-  type: string;
-  amount: number;
-}
-
 const EPOCH_MILLIS_FLOOR = Date.UTC(2020, 0, 1);
 const PARTIAL = { value: 1000, currency: "EUR" };
 const ABSENT_ACTION = `act_${"z".repeat(26)}`;
 
-function actionsOf(payment: string): Promise<ActionView[]> {
-  return ReadRaw<ActionView[]>(`/payments/${payment}/actions`);
+function actionsOf(payment: string) {
+  return ReadRaw(`/payments/${payment}/actions`, isActions);
 }
 
 describe("[checkout-com] refunds that do not exist", function () {
@@ -68,9 +63,9 @@ describe("[checkout-com] refunds that do not exist", function () {
     const absent = `pay_${"z".repeat(26)}`;
     await assert.rejects(
       () => RefundPayment({ payment: absent }, key()),
-      (error: unknown) =>
-        error instanceof PaymentNotFoundError &&
-        error.message === `No such payment: ${absent}`,
+      (cause: unknown) =>
+        cause instanceof PaymentNotFoundError &&
+        cause.message === `No such payment: ${absent}`,
     );
   });
 });
@@ -82,9 +77,9 @@ describe("[checkout-com] capturing what Checkout.com captures by itself", functi
     const payment = await Charge(this);
     await assert.rejects(
       () => CapturePayment(payment.id, key()),
-      (error: unknown) =>
-        error instanceof InvalidPaymentStateError &&
-        error.providerCode === "automatic_capture",
+      (cause: unknown) =>
+        cause instanceof InvalidPaymentStateError &&
+        cause.providerCode === "automatic_capture",
     );
     const settled = await Settled(payment.id, "succeeded");
     assert.equal(
@@ -148,9 +143,9 @@ describe("[checkout-com] hosted pages and customers", function () {
           },
           key(),
         ),
-      (error: unknown) =>
-        error instanceof CustomerNotFoundError &&
-        error.message === `No such customer: ${absent}`,
+      (cause: unknown) =>
+        cause instanceof CustomerNotFoundError &&
+        cause.message === `No such customer: ${absent}`,
     );
   });
 
@@ -171,14 +166,13 @@ describe("[checkout-com] hosted pages and customers", function () {
     const paymentId = standIn.payHostedPage(session.id, TEST_CARDS.approved);
     await Settled(paymentId, "succeeded");
 
-    const envelope = structuredClone(capturedFixture) as Record<
-      string,
-      unknown
-    >;
-    envelope.data = {
-      ...(envelope.data as Record<string, unknown>),
-      id: paymentId,
-      metadata: { antelope_capture: "auto", antelope_save_for: customer.id },
+    const envelope = {
+      ...capturedFixture,
+      data: {
+        ...capturedFixture.data,
+        id: paymentId,
+        metadata: { antelope_capture: "auto", antelope_save_for: customer.id },
+      },
     };
     const body = JSON.stringify(envelope);
     await VerifyWebhook({

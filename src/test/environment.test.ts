@@ -84,22 +84,18 @@ describe("[checkout-com] where an account sends its calls", () => {
   });
 
   it("prefers the configured merchant-specific base URL", () => {
-    const account = ToAccount(
-      {
-        secretKey: SANDBOX_KEY,
-        processingChannelId: CHANNEL,
-        baseUrl: MERCHANT_URL,
-      },
-      {} as never,
-    );
+    const config = {
+      secretKey: SANDBOX_KEY,
+      processingChannelId: CHANNEL,
+      baseUrl: MERCHANT_URL,
+    };
+    const account = ToAccount(config, config);
     assert.equal(account.client.baseUrl, MERCHANT_URL);
   });
 
   it("declares saved-method charges as Recurring unless told otherwise", () => {
-    const account = ToAccount(
-      { secretKey: SANDBOX_KEY, processingChannelId: CHANNEL },
-      {} as never,
-    );
+    const config = { secretKey: SANDBOX_KEY, processingChannelId: CHANNEL };
+    const account = ToAccount(config, config);
     assert.equal(account.merchantInitiatedType, "Recurring");
     assert.equal(account.client.baseUrl, "https://api.sandbox.checkout.com");
   });
