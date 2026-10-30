@@ -79,7 +79,10 @@ const LOCALE_BY_TAG: Record<string, string> = Object.fromEntries([
 function hostedLocale(locale: string | undefined): string | undefined {
   if (!locale) return undefined;
   const lowered = locale.toLowerCase();
-  return LOCALE_BY_TAG[lowered] ?? LOCALE_BY_TAG[lowered.split("-")[0]];
+  return (
+    LookUp(LOCALE_BY_TAG, lowered) ??
+    LookUp(LOCALE_BY_TAG, lowered.split("-")[0])
+  );
 }
 
 function billingCountry(account: Account): string {
