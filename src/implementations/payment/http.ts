@@ -1,4 +1,5 @@
 import type { JsonValue } from "./cko-types";
+import { ParseJson } from "./json";
 
 type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST";
 
@@ -97,7 +98,7 @@ async function readBody(response: Response): Promise<JsonValue | undefined> {
     return undefined;
   }
   try {
-    return JSON.parse(text);
+    return ParseJson(text);
   } catch {
     return { error_type: "unparseable_response" };
   }
