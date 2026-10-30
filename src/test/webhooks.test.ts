@@ -37,8 +37,8 @@ interface DeliveryData {
 
 const EPOCH_MILLIS_FLOOR = Date.UTC(2020, 0, 1);
 
-function delivery<Fixture extends { data: object }>(
-  fixture: Fixture,
+function delivery(
+  fixture: { data: object },
   data: DeliveryData,
   signatureKey = TEST_WEBHOOK_KEY,
 ): WebhookRequest {
