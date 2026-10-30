@@ -66,8 +66,14 @@ const HOSTED_LOCALES = [
 ];
 
 const LOCALE_BY_TAG: Record<string, string> = Object.fromEntries([
-  ...HOSTED_LOCALES.map((locale) => [locale.split("-")[0], locale]).reverse(),
-  ...HOSTED_LOCALES.map((locale) => [locale.toLowerCase(), locale]),
+  ...HOSTED_LOCALES.map((locale): [string, string] => [
+    locale.split("-")[0],
+    locale,
+  ]).reverse(),
+  ...HOSTED_LOCALES.map((locale): [string, string] => [
+    locale.toLowerCase(),
+    locale,
+  ]),
 ]);
 
 function hostedLocale(locale: string | undefined): string | undefined {
