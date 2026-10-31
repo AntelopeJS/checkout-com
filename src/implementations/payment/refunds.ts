@@ -1,3 +1,4 @@
+import { IsCkoActionAccepted } from "./resources";
 import {
   InvalidPaymentStateError,
   PaymentNotFoundError,
@@ -13,11 +14,7 @@ import { Translating } from "./errors";
 import { GetAccount } from "./accounts";
 import { ReadActions, ReadPayment } from "./follow";
 import { AssertPaymentId, ParseRefundId } from "./ids";
-import type {
-  CkoActionAccepted,
-  CkoPayment,
-  CkoRefundRequest,
-} from "./cko-types";
+import type { CkoPayment, CkoRefundRequest } from "./cko-types";
 import { REFUND_REASON_KEY, ToRefund, WriteMetadata } from "./mapping";
 
 const REFUND_ENTITY = { entity: "payment" as const, forbiddenIsState: true };
@@ -58,12 +55,15 @@ export async function RefundPayment(
     if (request.amount) {
       sent.amount = request.amount.value;
     }
-    const accepted = await client.send<CkoActionAccepted>({
-      method: "POST",
-      path: `/payments/${request.payment}/refunds`,
-      body: sent,
-      idempotencyKey,
-    });
+    const accepted = await client.send(
+      {
+        method: "POST",
+        path: `/payments/${request.payment}/refunds`,
+        body: sent,
+        idempotencyKey,
+      },
+      IsCkoActionAccepted,
+    );
     if (accepted.status === ALREADY_REFUNDED) {
       throw new InvalidPaymentStateError(
         "The payment is already refunded",

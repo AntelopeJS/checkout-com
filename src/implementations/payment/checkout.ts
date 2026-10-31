@@ -1,3 +1,8 @@
+import {
+  IsCkoCustomer,
+  IsCkoHostedPayment,
+  IsCkoHostedPaymentCreated,
+} from "./resources";
 import { PaymentError } from "@antelopejs/interface-payment";
 import type {
   CheckoutSession,
@@ -13,10 +18,8 @@ import { type Account, GetAccount } from "./accounts";
 import { AssertCustomerId, AssertHostedPaymentId, IsPaymentId } from "./ids";
 import { LookUp } from "./lookup";
 import type {
-  CkoCustomer,
   CkoHostedCustomer,
   CkoHostedPayment,
-  CkoHostedPaymentCreated,
   CkoHostedPaymentRequest,
 } from "./cko-types";
 import {
@@ -101,10 +104,13 @@ async function hostedCustomer(
   if (!customer) return undefined;
   AssertCustomerId(customer);
   const { body } = await Translating(customer, CUSTOMER_ENTITY, () =>
-    account.client.send<CkoCustomer>({
-      method: "GET",
-      path: `/customers/${customer}`,
-    }),
+    account.client.send(
+      {
+        method: "GET",
+        path: `/customers/${customer}`,
+      },
+      IsCkoCustomer,
+    ),
   );
   const payer: CkoHostedCustomer = { email: body.email };
   if (body.name) {
@@ -187,11 +193,14 @@ export async function CreateCheckoutSession(
   const account = GetAccount(provider);
   return SessionOnce(provider, idempotencyKey, () =>
     Translating("", SESSION_ENTITY, async () => {
-      const { body } = await account.client.send<CkoHostedPaymentCreated>({
-        method: "POST",
-        path: "/hosted-payments",
-        body: await buildRequest(account, request),
-      });
+      const { body } = await account.client.send(
+        {
+          method: "POST",
+          path: "/hosted-payments",
+          body: await buildRequest(account, request),
+        },
+        IsCkoHostedPaymentCreated,
+      );
       return {
         id: body.id,
         redirectUrl: body._links.redirect?.href ?? "",
@@ -230,10 +239,13 @@ export async function GetCheckoutSession(
   AssertHostedPaymentId(id);
   const account = GetAccount(provider);
   return Translating(id, SESSION_ENTITY, async () => {
-    const { body } = await account.client.send<CkoHostedPayment>({
-      method: "GET",
-      path: `/hosted-payments/${id}`,
-    });
+    const { body } = await account.client.send(
+      {
+        method: "GET",
+        path: `/hosted-payments/${id}`,
+      },
+      IsCkoHostedPayment,
+    );
     const session: CheckoutSession = {
       id: body.id,
       redirectUrl: body._links.redirect?.href ?? "",
