@@ -305,11 +305,31 @@ describe("[checkout-com] webhook verification", () => {
     assert.equal(error instanceof WebhookVerificationError, false);
   });
 
+  it("resolves undefined for a genuine delivery of a type it does not model, whatever its data holds", async () => {
+    for (const raw of [
+      '{"id":"evt_1","type":"source_updated","data":{"source_id":"src_1"}}',
+      '{"id":"evt_2","type":"payment_authentication_failed","data":{"id":"pay_1","metadata":{"a":{"b":1}}}}',
+      '{"id":"evt_3","type":"card_verified","created_on":null,"data":{"id":"pay_1"}}',
+      '{"id":"evt_4","type":"payment_pending_x","data":{"id":"pay_1","amount":"20"}}',
+    ]) {
+      assert.equal(
+        await VerifyWebhook(
+          request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
+        ),
+        undefined,
+        raw,
+      );
+    }
+  });
+
   it("refuses a genuine body that is JSON but not an event envelope", async () => {
     for (const raw of [
       "null",
       "{}",
       '{"id":"evt_1","type":"payment_captured"}',
+      '{"id":"evt_1","type":"source_updated","data":[]}',
+      '{"type":"source_updated","data":{}}',
+      '{"id":"evt_1","type":"payment_captured","data":{"amount":"20"}}',
     ]) {
       const error = await VerifyWebhook(
         request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
