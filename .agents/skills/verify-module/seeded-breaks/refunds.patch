@@ -1,0 +1,13 @@
+diff --git a/src/implementations/payment/refunds.ts b/src/implementations/payment/refunds.ts
+index 5a80a51..3f235cd 100644
+--- a/src/implementations/payment/refunds.ts
++++ b/src/implementations/payment/refunds.ts
+@@ -53,7 +53,7 @@ export async function RefundPayment(
+       metadata: WriteMetadata(request.metadata, reasonMetadata(request.reason)),
+     };
+     if (request.amount) {
+-      sent.amount = request.amount.value;
++      sent.amount = request.amount.value * 2;
+     }
+     const accepted = await client.send(
+       {

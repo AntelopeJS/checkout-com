@@ -1,0 +1,13 @@
+diff --git a/src/implementations/payment/webhooks.ts b/src/implementations/payment/webhooks.ts
+index f16151f..338c331 100644
+--- a/src/implementations/payment/webhooks.ts
++++ b/src/implementations/payment/webhooks.ts
+@@ -29,7 +29,7 @@ const REFUNDED = "payment_refunded";
+ const PAYMENT_EVENTS = {
+   [APPROVED]: "payment.authorized",
+   payment_canceled: "payment.canceled",
+-  payment_captured: "payment.succeeded",
++  payment_captured: "payment.authorized",
+   payment_declined: "payment.failed",
+   payment_expired: "payment.canceled",
+   payment_paid: "payment.succeeded",
