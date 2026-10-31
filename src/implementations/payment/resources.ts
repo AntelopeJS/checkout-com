@@ -2,6 +2,7 @@ import {
   type Guard,
   IsCount,
   IsFlag,
+  IsObject,
   IsText,
   ListOf,
   ObjectWith,
@@ -13,6 +14,7 @@ import type {
   CkoActionAccepted,
   CkoCreated,
   CkoCustomer,
+  CkoDelivery,
   CkoEventEnvelope,
   CkoHostedPayment,
   CkoHostedPaymentCreated,
@@ -157,6 +159,12 @@ const IsEventData = ObjectWith<CkoEventData>({
   category: Optional(IsText),
   reason_code: Optional(IsText),
   date: Optional(IsText),
+});
+
+export const IsCkoDelivery = ObjectWith<CkoDelivery>({
+  id: IsText,
+  type: IsText,
+  data: IsObject,
 });
 
 export const IsCkoEventEnvelope = ObjectWith<CkoEventEnvelope>({

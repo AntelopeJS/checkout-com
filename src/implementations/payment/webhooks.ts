@@ -1,4 +1,4 @@
-import { IsCkoEventEnvelope } from "./resources";
+import { IsCkoDelivery, IsCkoEventEnvelope } from "./resources";
 import { ParseJson } from "./json";
 import { PaymentError } from "@antelopejs/interface-payment";
 import type {
@@ -11,7 +11,7 @@ import { LookUp } from "./lookup";
 import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { AssertGenuine } from "./signature";
-import type { CkoEventEnvelope, JsonValue } from "./cko-types";
+import type { CkoDelivery, CkoEventEnvelope, JsonValue } from "./cko-types";
 import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import {
@@ -115,7 +115,7 @@ const BUILDERS: [Record<string, PaymentEventType>, EventBuilder][] = [
   [DISPUTE_EVENTS, disputeEvent],
 ];
 
-function parseEnvelope(body: Uint8Array): CkoEventEnvelope {
+function parseDelivery(body: Uint8Array): CkoDelivery {
   let parsed: JsonValue;
   try {
     parsed = ParseJson(Buffer.from(body).toString("utf8"));
@@ -124,7 +124,7 @@ function parseEnvelope(body: Uint8Array): CkoEventEnvelope {
       "The delivery was signed correctly but its body is not JSON",
     );
   }
-  if (!IsCkoEventEnvelope(parsed)) {
+  if (!IsCkoDelivery(parsed)) {
     throw new PaymentError(
       "The delivery was signed correctly but its body is not an event",
     );
@@ -132,21 +132,33 @@ function parseEnvelope(body: Uint8Array): CkoEventEnvelope {
   return parsed;
 }
 
+function readEnvelope(delivery: CkoDelivery): CkoEventEnvelope {
+  if (!IsCkoEventEnvelope(delivery)) {
+    throw new PaymentError(
+      `The delivery was signed correctly but its body is not a ${delivery.type} event`,
+    );
+  }
+  return delivery;
+}
+
 async function buildEvent(
   account: Account,
-  envelope: CkoEventEnvelope,
+  delivery: CkoDelivery,
 ): Promise<PaymentEvent | undefined> {
   for (const [types, build] of BUILDERS) {
-    const type = LookUp(types, envelope.type);
+    const type = LookUp(types, delivery.type);
     if (!type) continue;
-    const built = await build(account, envelope, type);
-    if (!built?.type) return undefined;
-    return {
-      ...built,
-      id: envelope.id,
-      type: built.type,
-      createdAt: ToEpochMillis(envelope.created_on ?? envelope.timestamp),
-    };
+    const envelope = readEnvelope(delivery);
+    return Translating(envelope.data.id, { entity: "payment" }, async () => {
+      const built = await build(account, envelope, type);
+      if (!built?.type) return undefined;
+      return {
+        ...built,
+        id: envelope.id,
+        type: built.type,
+        createdAt: ToEpochMillis(envelope.created_on ?? envelope.timestamp),
+      };
+    });
   }
   return undefined;
 }
@@ -167,8 +179,5 @@ export async function VerifyWebhook(
     account.webhookSignatureKey,
     account.webhookAuthorization,
   );
-  const envelope = parseEnvelope(request.body);
-  return Translating(envelope.data?.id ?? "", { entity: "payment" }, () =>
-    buildEvent(account, envelope),
-  );
+  return buildEvent(account, parseDelivery(request.body));
 }

@@ -130,6 +130,13 @@ export interface CkoHostedPayment {
   _links: CkoLinks;
 }
 
+/** What every delivery carries, whatever its type. Only a type this module maps has its `data` read, as a {@link CkoEventEnvelope}. */
+export interface CkoDelivery {
+  id: string;
+  type: string;
+  data: object;
+}
+
 export interface CkoEventEnvelope {
   id: string;
   type: string;

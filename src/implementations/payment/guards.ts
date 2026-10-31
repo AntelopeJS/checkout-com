@@ -3,7 +3,7 @@ export type Guard<T> = (value: unknown) => value is T;
 
 type Fields<T> = { [K in keyof T]-?: Guard<T[K]> };
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function IsObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -30,13 +30,13 @@ export function ListOf<T>(guard: Guard<T>): Guard<T[]> {
 
 export function RecordOf<T>(guard: Guard<T>): Guard<Record<string, T>> {
   return (value): value is Record<string, T> =>
-    isObject(value) && Object.values(value).every((item) => guard(item));
+    IsObject(value) && Object.values(value).every((item) => guard(item));
 }
 
 /** Checks every field `T` declares, an absent optional one included. */
 export function ObjectWith<T>(fields: Fields<T>): Guard<T> {
   return (value): value is T => {
-    if (!isObject(value)) return false;
+    if (!IsObject(value)) return false;
     for (const key in fields) {
       const field = Object.prototype.hasOwnProperty.call(value, key)
         ? value[key]
