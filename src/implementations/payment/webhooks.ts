@@ -1,3 +1,5 @@
+import { IsCkoEventEnvelope } from "./resources";
+import { ParseJson } from "./json";
 import { PaymentError } from "@antelopejs/interface-payment";
 import type {
   PaymentEvent,
@@ -9,7 +11,7 @@ import { LookUp } from "./lookup";
 import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { AssertGenuine } from "./signature";
-import type { CkoEventEnvelope } from "./cko-types";
+import type { CkoEventEnvelope, JsonValue } from "./cko-types";
 import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import {
@@ -114,13 +116,20 @@ const BUILDERS: [Record<string, PaymentEventType>, EventBuilder][] = [
 ];
 
 function parseEnvelope(body: Uint8Array): CkoEventEnvelope {
+  let parsed: JsonValue;
   try {
-    return JSON.parse(Buffer.from(body).toString("utf8")) as CkoEventEnvelope;
+    parsed = ParseJson(Buffer.from(body).toString("utf8"));
   } catch {
     throw new PaymentError(
       "The delivery was signed correctly but its body is not JSON",
     );
   }
+  if (!IsCkoEventEnvelope(parsed)) {
+    throw new PaymentError(
+      "The delivery was signed correctly but its body is not an event",
+    );
+  }
+  return parsed;
 }
 
 async function buildEvent(

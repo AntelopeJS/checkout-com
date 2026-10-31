@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import type { CkoPayment } from "../implementations/payment/cko-types";
+import { IsCkoPayment } from "../implementations/payment/resources";
 import { CkoApiError, CkoClient } from "../implementations/payment/http";
 
 interface Answer {
@@ -56,7 +56,7 @@ describe("[checkout-com] client, on answers Checkout.com does not document", () 
 
   it("reports an error body whose error_codes is not a list as Checkout.com's error status", async () => {
     next = { status: 400, body: '{"error_type":"bad","error_codes":"abc"}' };
-    const error = await rejection(client.send<CkoPayment>(READ));
+    const error = await rejection(client.send(READ, IsCkoPayment));
     assert.equal(error.status, 400);
     assert.equal(error.errorType, "bad");
     assert.deepEqual(error.errorCodes, []);
@@ -64,16 +64,25 @@ describe("[checkout-com] client, on answers Checkout.com does not document", () 
 
   it("refuses a successful answer that is not JSON", async () => {
     next = { status: 200, body: "<html>gateway</html>" };
-    assert.equal((await rejection(client.send<CkoPayment>(READ))).status, 200);
+    assert.equal(
+      (await rejection(client.send(READ, IsCkoPayment))).status,
+      200,
+    );
   });
 
   it("refuses an empty successful answer where a resource is expected", async () => {
     next = { status: 200, body: "" };
-    assert.equal((await rejection(client.send<CkoPayment>(READ))).status, 200);
+    assert.equal(
+      (await rejection(client.send(READ, IsCkoPayment))).status,
+      200,
+    );
   });
 
   it("refuses a JSON answer that is not the resource asked for", async () => {
     next = { status: 201, body: "[1,2]" };
-    assert.equal((await rejection(client.send<CkoPayment>(READ))).status, 201);
+    assert.equal(
+      (await rejection(client.send(READ, IsCkoPayment))).status,
+      201,
+    );
   });
 });
