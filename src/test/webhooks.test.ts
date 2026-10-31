@@ -304,4 +304,18 @@ describe("[checkout-com] webhook verification", () => {
     assert.ok(error instanceof PaymentError);
     assert.equal(error instanceof WebhookVerificationError, false);
   });
+
+  it("refuses a genuine body that is JSON but not an event envelope", async () => {
+    for (const raw of [
+      "null",
+      "{}",
+      '{"id":"evt_1","type":"payment_captured"}',
+    ]) {
+      const error = await VerifyWebhook(
+        request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
+      ).catch((cause: unknown) => cause);
+      assert.ok(error instanceof PaymentError, `${raw} is refused`);
+      assert.equal(error instanceof WebhookVerificationError, false);
+    }
+  });
 });
