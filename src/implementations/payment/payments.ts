@@ -1,3 +1,4 @@
+import { IsCkoActionAccepted, IsCkoPayment } from "./resources";
 import type {
   Amount,
   Payment,
@@ -159,7 +160,7 @@ async function linkInstrument(
   instrument: string,
   customer: string,
 ): Promise<void> {
-  await account.client.send({
+  await account.client.execute({
     method: "PATCH",
     path: `/instruments/${instrument}`,
     body: { customer: { id: customer } },
@@ -205,12 +206,15 @@ export async function CreatePayment(
   const account = GetAccount(provider);
   try {
     const sent = await buildRequest(account, request);
-    const { body } = await account.client.send<CkoPayment>({
-      method: "POST",
-      path: "/payments",
-      body: sent,
-      idempotencyKey,
-    });
+    const { body } = await account.client.send(
+      {
+        method: "POST",
+        path: "/payments",
+        body: sent,
+        idempotencyKey,
+      },
+      IsCkoPayment,
+    );
     const payment = ToPayment(
       { ...body, metadata: body.metadata ?? sent.metadata },
       { requested: request.amount },
@@ -283,12 +287,15 @@ export async function CapturePayment(
   const { client, settleTimeoutMs } = GetAccount(provider);
   return Translating(id, ACTION_ENTITY, async () => {
     await assertCapturable(client, id);
-    const accepted = await client.send<CkoActionAccepted>({
-      method: "POST",
-      path: `/payments/${id}/captures`,
-      body: amount ? { amount: amount.value } : {},
-      idempotencyKey,
-    });
+    const accepted = await client.send(
+      {
+        method: "POST",
+        path: `/payments/${id}/captures`,
+        body: amount ? { amount: amount.value } : {},
+        idempotencyKey,
+      },
+      IsCkoActionAccepted,
+    );
     assertNotAlreadyDone(accepted, "captured");
     return FollowPayment(client, id, hasLeftAuthorization, settleTimeoutMs);
   });
@@ -302,12 +309,15 @@ export async function CancelPayment(
   AssertPaymentId(id);
   const { client, settleTimeoutMs } = GetAccount(provider);
   return Translating(id, ACTION_ENTITY, async () => {
-    const accepted = await client.send<CkoActionAccepted>({
-      method: "POST",
-      path: `/payments/${id}/voids`,
-      body: {},
-      idempotencyKey,
-    });
+    const accepted = await client.send(
+      {
+        method: "POST",
+        path: `/payments/${id}/voids`,
+        body: {},
+        idempotencyKey,
+      },
+      IsCkoActionAccepted,
+    );
     assertNotAlreadyDone(accepted, "voided");
     return FollowPayment(client, id, hasLeftAuthorization, settleTimeoutMs);
   });

@@ -1,4 +1,6 @@
 import type { JsonValue } from "./cko-types";
+import { type Guard, IsText, ListOf } from "./guards";
+import { ParseJson } from "./json";
 
 type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST";
 
@@ -28,6 +30,24 @@ export interface CkoErrorBody {
 
 const IDEMPOTENCY_HEADER = "Cko-Idempotency-Key";
 const NO_CONTENT = 204;
+const UNPARSEABLE = "unparseable_response";
+const IsTextList = ListOf(IsText);
+
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function errorBodyOf(body: JsonValue): CkoErrorBody {
+  if (!isJsonObject(body)) return {};
+  const decoded: CkoErrorBody = {};
+  const { request_id, error_type, error_codes } = body;
+  if (IsText(request_id)) decoded.request_id = request_id;
+  if (IsText(error_type)) decoded.error_type = error_type;
+  if (IsTextList(error_codes)) decoded.error_codes = error_codes;
+  return decoded;
+}
 
 /**
  * Checkout.com answered, and the answer was not a success.
@@ -86,21 +106,36 @@ function failureReason(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-async function readBody(response: Response): Promise<JsonValue | undefined> {
+type ReadBody =
+  | { kind: "json"; value: JsonValue }
+  | { kind: "empty" }
+  | { kind: "unparseable" };
+
+async function readBody(response: Response): Promise<ReadBody> {
   if (response.status === NO_CONTENT) {
-    return undefined;
+    return { kind: "empty" };
   }
   const text = await response.text().catch((cause: unknown) => {
     throw new CkoTransportError(failureReason(cause));
   });
   if (!text) {
-    return undefined;
+    return { kind: "empty" };
   }
   try {
-    return JSON.parse(text);
+    return { kind: "json", value: ParseJson(text) };
   } catch {
-    return { error_type: "unparseable_response" };
+    return { kind: "unparseable" };
   }
+}
+
+function errorOf(status: number, body: ReadBody): CkoApiError {
+  if (body.kind === "unparseable") {
+    return new CkoApiError(status, { error_type: UNPARSEABLE });
+  }
+  return new CkoApiError(
+    status,
+    body.kind === "json" ? errorBodyOf(body.value) : {},
+  );
 }
 
 /**
@@ -114,7 +149,9 @@ export class CkoClient {
     return this.settings.baseUrl;
   }
 
-  async send<T>(request: CkoRequest): Promise<CkoResponse<T>> {
+  private async answer(
+    request: CkoRequest,
+  ): Promise<{ status: number; body: ReadBody }> {
     const response = await fetch(new URL(request.path, this.settings.baseUrl), {
       method: request.method,
       headers: headers(this.settings.secretKey, request),
@@ -126,8 +163,30 @@ export class CkoClient {
     });
     const body = await readBody(response);
     if (!response.ok) {
-      throw new CkoApiError(response.status, (body ?? {}) as CkoErrorBody);
+      throw errorOf(response.status, body);
     }
-    return { status: response.status, body: body as T };
+    return { status: response.status, body };
+  }
+
+  /** Sends `request` and reads the answer as `T`; refuses a 2xx whose body is empty, not JSON, or not a `T`. */
+  async send<T>(
+    request: CkoRequest,
+    isAnswer: Guard<T>,
+  ): Promise<CkoResponse<T>> {
+    const { status, body } = await this.answer(request);
+    if (body.kind !== "json") {
+      throw new CkoApiError(status, {
+        error_type: body.kind === "empty" ? "empty_response" : UNPARSEABLE,
+      });
+    }
+    if (!isAnswer(body.value)) {
+      throw new CkoApiError(status, { error_type: "unexpected_response" });
+    }
+    return { status, body: body.value };
+  }
+
+  /** Sends `request` for its effect only: any 2xx is a success, whatever its body. */
+  async execute(request: CkoRequest): Promise<void> {
+    await this.answer(request);
   }
 }

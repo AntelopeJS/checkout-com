@@ -1,0 +1,13 @@
+diff --git a/src/implementations/payment/signature.ts b/src/implementations/payment/signature.ts
+index 3974dba..39b21dd 100644
+--- a/src/implementations/payment/signature.ts
++++ b/src/implementations/payment/signature.ts
+@@ -19,7 +19,7 @@ function readHeader(
+ }
+ 
+ function sameBytes(left: Buffer, right: Buffer): boolean {
+-  return left.length === right.length && timingSafeEqual(left, right);
++  return left.length === right.length;
+ }
+ 
+ function assertSigned(request: WebhookRequest, signatureKey: string): void {

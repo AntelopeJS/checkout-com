@@ -1,3 +1,4 @@
+import { IsCkoCustomer } from "./resources";
 import type { Payment } from "@antelopejs/interface-payment";
 
 import type { CkoClient } from "./http";
@@ -74,10 +75,13 @@ export async function RecordSavedMethod(
   instrument: string,
   initialPayment: string,
 ): Promise<boolean> {
-  const { body: customer } = await client.send<CkoCustomer>({
-    method: "GET",
-    path: `/customers/${customerId}`,
-  });
+  const { body: customer } = await client.send(
+    {
+      method: "GET",
+      path: `/customers/${customerId}`,
+    },
+    IsCkoCustomer,
+  );
   if (ReadSavedMethod(customer.metadata, instrument)) return true;
   const metadata = {
     ...prunedMetadata(customer),
@@ -85,7 +89,7 @@ export async function RecordSavedMethod(
       `${initialPayment}${RECORD_SEPARATOR}${Date.now()}`,
   };
   if (Object.keys(metadata).length > METADATA_LIMIT) return false;
-  await client.send({
+  await client.execute({
     method: "PATCH",
     path: `/customers/${customerId}`,
     body: { metadata },
@@ -98,10 +102,13 @@ export async function FindSavedMethod(
   customerId: string,
   instrument: string,
 ): Promise<SavedMethod | undefined> {
-  const { body: customer } = await client.send<CkoCustomer>({
-    method: "GET",
-    path: `/customers/${customerId}`,
-  });
+  const { body: customer } = await client.send(
+    {
+      method: "GET",
+      path: `/customers/${customerId}`,
+    },
+    IsCkoCustomer,
+  );
   return ReadSavedMethod(customer.metadata, instrument);
 }
 

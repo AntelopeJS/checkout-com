@@ -1,3 +1,4 @@
+import { IsCkoCreated, IsCkoCustomer } from "./resources";
 import { createHash } from "node:crypto";
 import { PaymentError } from "@antelopejs/interface-payment";
 import type {
@@ -12,12 +13,7 @@ import { GetAccount } from "./accounts";
 import type { CkoClient } from "./http";
 import { ToPaymentMethod } from "./mapping";
 import { AssertCustomerId, AssertInstrumentId } from "./ids";
-import type {
-  CkoCreated,
-  CkoCustomer,
-  CkoCustomerRequest,
-  CkoMetadata,
-} from "./cko-types";
+import type { CkoCustomer, CkoCustomerRequest, CkoMetadata } from "./cko-types";
 import {
   IdempotencyMetadataKey,
   IsInternalCustomerKey,
@@ -72,10 +68,13 @@ async function replayed(
   email: string,
   fingerprint: string,
 ): Promise<Customer> {
-  const { body: existing } = await client.send<CkoCustomer>({
-    method: "GET",
-    path: `/customers/${encodeURIComponent(email)}`,
-  });
+  const { body: existing } = await client.send(
+    {
+      method: "GET",
+      path: `/customers/${encodeURIComponent(email)}`,
+    },
+    IsCkoCustomer,
+  );
   if (existing.metadata?.[IdempotencyMetadataKey()] !== fingerprint) {
     throw new PaymentError(
       `A Checkout.com customer with the email ${email} already exists`,
@@ -109,11 +108,14 @@ export async function CreateCustomer(
   }
   return Translating("", CUSTOMER_ENTITY, async () => {
     try {
-      const { body } = await client.send<CkoCreated>({
-        method: "POST",
-        path: "/customers",
-        body: sent,
-      });
+      const { body } = await client.send(
+        {
+          method: "POST",
+          path: "/customers",
+          body: sent,
+        },
+        IsCkoCreated,
+      );
       return toCustomer({ id: body.id, email, name: request.name, metadata });
     } catch (error) {
       if (!isEmailTaken(error)) throw error;
@@ -129,10 +131,13 @@ export async function GetCustomer(
   AssertCustomerId(id);
   const { client } = GetAccount(provider);
   return Translating(id, CUSTOMER_ENTITY, async () => {
-    const { body } = await client.send<CkoCustomer>({
-      method: "GET",
-      path: `/customers/${id}`,
-    });
+    const { body } = await client.send(
+      {
+        method: "GET",
+        path: `/customers/${id}`,
+      },
+      IsCkoCustomer,
+    );
     return toCustomer(body);
   });
 }
@@ -145,7 +150,7 @@ export async function DeleteCustomer(
   AssertCustomerId(id);
   const { client } = GetAccount(provider);
   await Translating(id, CUSTOMER_ENTITY, () =>
-    client.send({ method: "DELETE", path: `/customers/${id}` }),
+    client.execute({ method: "DELETE", path: `/customers/${id}` }),
   );
 }
 
@@ -161,10 +166,13 @@ export async function ListPaymentMethods(
   AssertCustomerId(customer);
   const { client } = GetAccount(provider);
   return Translating(customer, CUSTOMER_ENTITY, async () => {
-    const { body } = await client.send<CkoCustomer>({
-      method: "GET",
-      path: `/customers/${customer}`,
-    });
+    const { body } = await client.send(
+      {
+        method: "GET",
+        path: `/customers/${customer}`,
+      },
+      IsCkoCustomer,
+    );
     const methods = (body.instruments ?? []).map((instrument) =>
       ToPaymentMethod(
         instrument,
@@ -185,6 +193,6 @@ export async function DetachPaymentMethod(
   AssertInstrumentId(id);
   const { client } = GetAccount(provider);
   await Translating(id, METHOD_ENTITY, () =>
-    client.send({ method: "DELETE", path: `/instruments/${id}` }),
+    client.execute({ method: "DELETE", path: `/instruments/${id}` }),
   );
 }

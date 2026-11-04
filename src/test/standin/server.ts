@@ -79,7 +79,9 @@ function fingerprint(method: string, path: string, body: JsonObject): string {
 async function readBody(request: IncomingMessage): Promise<JsonObject> {
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
-    chunks.push(chunk);
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+    }
   }
   const text = Buffer.concat(chunks).toString("utf8");
   const body = text ? ParseJson(text) : {};

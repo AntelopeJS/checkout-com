@@ -1,3 +1,4 @@
+import { IsCkoActions, IsCkoPayment } from "./resources";
 import { setTimeout as delay } from "node:timers/promises";
 import type { Payment } from "@antelopejs/interface-payment";
 
@@ -14,7 +15,7 @@ export function ReadPayment(
   id: string,
 ): Promise<CkoPayment> {
   return client
-    .send<CkoPayment>({ method: "GET", path: `/payments/${id}` })
+    .send({ method: "GET", path: `/payments/${id}` }, IsCkoPayment)
     .then(({ body }) => body);
 }
 
@@ -23,7 +24,7 @@ export function ReadActions(
   id: string,
 ): Promise<CkoAction[]> {
   return client
-    .send<CkoAction[]>({ method: "GET", path: `/payments/${id}/actions` })
+    .send({ method: "GET", path: `/payments/${id}/actions` }, IsCkoActions)
     .then(({ body }) => body ?? []);
 }
 

@@ -1,0 +1,33 @@
+---
+covers:
+docs:
+  - README.md
+  - docs/5.testing.md
+journeys:
+  - module-dev
+  - pay-through-stand-in
+---
+
+# Smoke
+
+The fixed journey every verdict runs: load the module as `local`, charge one card and read the payment back.
+
+## Sub-features
+
+- `module-dev` is the pack's journey: the project answers, the consumer loads the payment interface, Ctrl+C exits 130.
+- `pay-through-stand-in`: one `CreatePayment` reaches the stand-in and the payment reads `succeeded`.
+
+## How to get to it (user POV)
+
+- A project with `@antelopejs/checkout-com` and a module that imports `@antelopejs/interface-payment`.
+
+## Driving it with antelopejs-verify
+
+```bash
+pnpm exec antelopejs-verify journey "$RUN" smoke
+```
+
+## Gotchas
+
+- The smoke feature covers no glob, so it never marks a file as mapped.
+- The Checkout.com side is the module's own stand-in (`src/test/standin`, built to `dist/test/standin`), so a feature proves agreement with its reading of the documentation, not with the live service; see [sandbox](sandbox.md).

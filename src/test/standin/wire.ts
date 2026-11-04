@@ -13,9 +13,36 @@ export interface JsonObject {
   [key: string]: JsonValue | undefined;
 }
 
-/** `JSON.parse`, whose result is JSON by construction. */
+/** Whether `value` is JSON data, checked all the way down: what `JSON.parse` returns. */
+function isJsonValue(value: unknown): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every((item) => isJsonValue(item));
+  }
+  if (typeof value !== "object") {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return false;
+  }
+  return Object.values(value).every((item) => isJsonValue(item));
+}
+
+/** `JSON.parse`, whose result is JSON by construction, checked rather than asserted. */
 export function ParseJson(text: string): JsonValue {
-  return JSON.parse(text);
+  const parsed: unknown = JSON.parse(text);
+  if (!isJsonValue(parsed)) {
+    throw new SyntaxError("JSON.parse returned a value that is not JSON data");
+  }
+  return parsed;
 }
 
 export function isJsonObject(
