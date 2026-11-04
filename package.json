@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@antelopejs/interface-core": ">=0.0.5 <1.0.0",
-    "@antelopejs/interface-payment": "file:.campaign/tgz/antelopejs-interface-payment-0f2509a.tgz"
+    "@antelopejs/interface-payment": ">=0.2.0 <0.3.0"
   },
   "devDependencies": {
     "@antelopejs/core": "^1.17.1",
@@ -68,11 +68,6 @@
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.6.5",
-  "pnpm": {
-    "overrides": {
-      "@antelopejs/interface-payment": "file:.campaign/tgz/antelopejs-interface-payment-0f2509a.tgz"
-    }
-  },
   "antelopeJs": {
     "implements": [
       "@antelopejs/interface-payment"
