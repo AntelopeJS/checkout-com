@@ -3,6 +3,17 @@ covers:
   - src/implementations/payment/customers.ts
   - src/implementations/payment/saved-methods.ts
   - src/implementations/payment/mapping.ts
+  - src/implementations/payment/accounts.ts
+  - src/implementations/payment/errors.ts
+  - src/implementations/payment/guards.ts
+  - src/implementations/payment/http.ts
+  - src/implementations/payment/ids.ts
+  - src/implementations/payment/json.ts
+  - src/implementations/payment/lookup.ts
+  - src/implementations/payment/resources.ts
+  - src/index.ts
+  - src/config.ts
+  - src/implementations/payment/index.ts
 docs:
   - README.md
   - docs/3.customers-and-cards.md
