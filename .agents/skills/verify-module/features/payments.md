@@ -10,6 +10,12 @@ covers:
   - src/implementations/payment/lookup.ts
   - src/implementations/payment/ids.ts
   - src/implementations/payment/index.ts
+  - src/implementations/payment/accounts.ts
+  - src/implementations/payment/errors.ts
+  - src/implementations/payment/http.ts
+  - src/implementations/payment/saved-methods.ts
+  - src/index.ts
+  - src/config.ts
 docs:
   - README.md
   - docs/2.payments.md

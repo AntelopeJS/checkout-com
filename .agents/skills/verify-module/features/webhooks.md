@@ -2,6 +2,20 @@
 covers:
   - src/implementations/payment/webhooks.ts
   - src/implementations/payment/signature.ts
+  - src/implementations/payment/accounts.ts
+  - src/implementations/payment/errors.ts
+  - src/implementations/payment/follow.ts
+  - src/implementations/payment/guards.ts
+  - src/implementations/payment/http.ts
+  - src/implementations/payment/ids.ts
+  - src/implementations/payment/json.ts
+  - src/implementations/payment/lookup.ts
+  - src/implementations/payment/mapping.ts
+  - src/implementations/payment/resources.ts
+  - src/implementations/payment/saved-methods.ts
+  - src/index.ts
+  - src/config.ts
+  - src/implementations/payment/index.ts
 docs:
   - README.md
   - docs/4.webhooks.md

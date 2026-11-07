@@ -4,6 +4,10 @@ covers:
   - src/index.ts
   - src/implementations/payment/accounts.ts
   - src/implementations/payment/errors.ts
+  - src/implementations/payment/guards.ts
+  - src/implementations/payment/http.ts
+  - src/implementations/payment/json.ts
+  - src/implementations/payment/index.ts
 docs:
   - README.md
   - docs/1.introduction.md
