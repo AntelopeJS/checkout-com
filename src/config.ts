@@ -46,8 +46,8 @@ export interface Config extends AccountConfig {
   /** How long one HTTP call may take. Default 30 seconds. */
   timeoutMs?: number;
   /**
-   * How long a capture, void or refund is followed until Checkout.com reports
-   * it applied. Default 10 seconds.
+   * How long a capture or a void is followed until Checkout.com reports it
+   * applied. A refund is not followed. Default 10 seconds.
    */
   settleTimeoutMs?: number;
 }
