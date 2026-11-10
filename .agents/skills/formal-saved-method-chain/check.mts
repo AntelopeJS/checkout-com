@@ -32,13 +32,14 @@ import { IsError, ModelGap } from "./wire.mts";
 const EXIT = { ok: 0, changed: 1, tool: 2 };
 const SEED = 20261110;
 const RUNS = 1000;
-const SEMANTICS: readonly Semantics[] = ["replace", "merge"];
+/** The semantics the sandbox showed (PATCH replaces the map), which decides the exit code. */
+const GATED: Semantics = "replace";
+/** A provider that merges a PATCH: reported for reference, never gating. */
+const OBSERVED: Semantics = "merge";
 
 /** The rules the module breaks today, with the states of each shrunk counterexample at the pinned seed. */
 const FINDINGS = new Map<string, number>([
   ["NoRecordOutlivesInstrument_replace", 6],
-  ["MetadataLimit_merge", 9],
-  ["NoRecordOutlivesInstrument_merge", 6],
 ]);
 
 const root = path.resolve(
@@ -265,16 +266,24 @@ async function main(): Promise<number> {
     `fast-check ${fc.__version}, seed ${SEED}, ${RUNS} runs per rule and semantics`,
   );
   const results: Result[] = [];
-  for (const semantics of SEMANTICS) {
-    console.log(await coverage(chain, semantics));
-    for (const rule of RULES) {
-      results.push({
-        name: `${rule}_${semantics}`,
-        failure: await checkRule(chain, rule, semantics),
-      });
-    }
+  console.log(await coverage(chain, GATED));
+  for (const rule of RULES) {
+    results.push({
+      name: `${rule}_${GATED}`,
+      failure: await checkRule(chain, rule, GATED),
+    });
   }
-  return report(results);
+  const exit = report(results);
+  console.log(await coverage(chain, OBSERVED));
+  for (const rule of RULES) {
+    const failure = await checkRule(chain, rule, OBSERVED);
+    console.log(
+      failure
+        ? `under ${OBSERVED}, ${rule} breaks (${failure.states} states): ${describe(failure)}`
+        : `under ${OBSERVED}, ${rule} holds`,
+    );
+  }
+  return exit;
 }
 
 try {

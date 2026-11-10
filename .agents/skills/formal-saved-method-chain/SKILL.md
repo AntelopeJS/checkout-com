@@ -21,13 +21,17 @@ No build is needed. `check.mts` registers a module hook that transpiles each fil
 
 The check uses fast-check 4.10.2 from the exact devDependency. Seed `20261110`, 1000 runs per rule and semantics. The seed, the run count, the generators and the fast-check version fix every counterexample, so keep all four unchanged when you compare a result with this record.
 
+Only `replace`, the semantics the sandbox showed, decides the result. `merge` is a provider the sandbox is not, so its results are printed for reference and never gate: a `merge` result changing on a fix is expected, since no write the module can send removes a key under merge.
+
 It prints, in order:
 
-- One `coverage <semantics>:` line per semantics. Each line counts what the 1000 runs reached.
-- One `holds` line that names every rule that held and is not a recorded finding.
-- One line per rule that differs from holding. `finding <Rule> (<N> states)` names a recorded finding that still breaks at its recorded length. `BROKEN` names a rule that held and now breaks. `CHANGED` names a finding whose counterexample length changed. `HOLDS` names a finding that no longer breaks. A broken rule's line is followed by its seed, its shrink path, the shrunk scenario and the numbered trace.
+- A `coverage replace:` line that counts what the 1000 runs reached.
+- One `holds` line that names every rule that held under replace and is not a recorded finding.
+- One line per replace rule that differs from holding. `finding <Rule> (<N> states)` names a recorded finding that still breaks at its recorded length. `BROKEN` names a rule that held and now breaks. `CHANGED` names a finding whose counterexample length changed. `HOLDS` names a finding that no longer breaks. A broken rule's line is followed by its seed, its shrink path, the shrunk scenario and the numbered trace.
 
-Exit 0 means the result matches the record in `check.mts`. Exit 1 means a rule changed. Exit 2 means the check could not run. That covers a wrong argument, a source that fails to load, and a request or body the model does not answer, which is reported as `ModelGap`. A rule name carries its semantics, as in `MetadataLimit_merge`.
+- A `coverage merge:` line, then one `under merge, <Rule> holds` or `under merge, <Rule> breaks (<N> states)` line per rule, which neither the exit code nor the verify gate reads.
+
+Exit 0 means the replace result matches the record in `check.mts`. Exit 1 means a replace rule changed. Exit 2 means the check could not run. That covers a wrong argument, a source that fails to load, and a request or body the model does not answer, which is reported as `ModelGap`. A gated rule name carries its semantics, as in `NoRecordOutlivesInstrument_replace`.
 
 `N states` counts as TLC counts a trace: the initial state, then one state per request the model answered or 3DS step the payer took, up to the step that breaks the rule. A rule checked at quiescence counts every step of the run.
 
@@ -57,12 +61,12 @@ The `merge` semantics is not observed. It models a provider that merges a PATCH 
 
 | Rule | Plain sentence | Checked | Replace | Merge |
 | --- | --- | --- | --- | --- |
-| `MetadataLimit` | No customer holds more than 20 pairs, and the module sends no customer write over 20. | every step | holds | finding (9) |
+| `MetadataLimit` | No customer holds more than 20 pairs, and the module sends no customer write over 20. | every step | holds | breaks (9), not gated |
 | `CallerKeysKept` | Every caller key given to `CreateCustomer` keeps its value. | every step | holds | holds |
 | `ChainMatchesRecord` | An off-session charge sends `previous_payment_id` exactly when the customer read it made held a record for the card, and then sends the recorded payment. | each charge | holds | holds |
 | `RecordKept` | Once a card's record is stored, it names the same payment for as long as the customer has the card. | every step | holds | holds |
 | `ListMatchesRecord` | `ListPaymentMethods` answers the cards its read saw, each with the record's save time or 0. | each list | holds | holds |
-| `NoRecordOutlivesInstrument` | No record names a card the customer no longer has. | quiescence | finding (6) | finding (6) |
+| `NoRecordOutlivesInstrument` | No record names a card the customer no longer has. | quiescence | finding (6) | breaks (6), not gated |
 | `Settles` | Every operation settles once no request is left to answer. | quiescence | holds | holds |
 
 `RecordKept` is the only rule that sees the lost update `oneAtATime` prevents. `ListMatchesRecord` is the only rule over `ListPaymentMethods`. `Settles` turns a wedged write queue into a finding instead of a hung check.
@@ -109,9 +113,9 @@ The 715 cards still in 3DS are saves with no `return` for that card. The 187 aut
 
 ## Findings
 
-Recorded in `FINDINGS` in `check.mts`, at seed `20261110`.
+Recorded in `FINDINGS` in `check.mts`, at seed `20261110`. Only the replace finding gates; the merge results below are for reference.
 
-### NoRecordOutlivesInstrument, under both semantics (6 states)
+### NoRecordOutlivesInstrument, under replace (6 states; merge breaks the same way)
 
 Shrink path `6:0:1:0:2:2:2`. Scenario `{"callerKeys":15,"saves":["frictionless"],"ops":[{"kind":"detach","card":0}]}`.
 
@@ -126,7 +130,7 @@ Shrink path `6:0:1:0:2:2:2`. Scenario `{"callerKeys":15,"saves":["frictionless"]
 
 `DetachPaymentMethod` deletes the instrument and leaves its record. The record stays until a later save prunes it, and under merge no save prunes it. In this trace the detach lands between the save's read and its write, so the save writes a record for a card that is already gone. A fix that prunes only inside `DetachPaymentMethod` would still lose this interleaving unless the detach waits for the record writes too. That last point is inferred from the trace.
 
-### MetadataLimit, under merge (9 states)
+### MetadataLimit, under merge only (9 states, not gated)
 
 Shrink path `46:10:8:12:12:2:2`. Scenario `{"callerKeys":18,"saves":["frictionless","frictionless"],"ops":[{"kind":"detach","card":2}]}`.
 
@@ -156,4 +160,4 @@ Each scratch change below was applied to `src/`, run through the check, and reve
 | `initiation` never sets `previous_payment_id` | `BROKEN ChainMatchesRecord` under both semantics (7 states) |
 | `ListPaymentMethods` always answers `createdAt` 0 | `BROKEN ListMatchesRecord` under both semantics (7 states) |
 
-A mutation can also move `MetadataLimit_merge` off its recorded 9 states, because a changed module shrinks to a different interleaving. `Settles` has no mutation: no plausible edit of `oneAtATime` leaves a write that never settles.
+A mutation can also move the merge-only `MetadataLimit` break off 9 states, because a changed module shrinks to a different interleaving. `Settles` has no mutation: no plausible edit of `oneAtATime` leaves a write that never settles.
