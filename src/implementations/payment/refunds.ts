@@ -90,8 +90,10 @@ export async function GetRefund(
   const { payment: paymentId, action: actionId } = ParseRefundId(id);
   const { client } = GetAccount(provider);
   return Translating(id, { entity: "refund" }, async () => {
-    const payment = await ReadPayment(client, paymentId);
-    const actions = await ReadActions(client, paymentId);
+    const [payment, actions] = await Promise.all([
+      ReadPayment(client, paymentId),
+      ReadActions(client, paymentId),
+    ]);
     const action = actions.find(
       (each) => each.id === actionId && each.type === "Refund",
     );
