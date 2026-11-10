@@ -237,6 +237,14 @@ export function delivery(type: string, data: Record<string, Json>, signatureKey:
 
 export const RETURN_URL = "https://merchant.invalid/return";
 
+/** The payer's browser opening a payment's 3-D Secure redirect, which authenticates a frictionless card; then `GetPayment` once the stand-in has applied what followed. */
+export async function passRedirect(session: Session, name: string, payment: CallResult): Promise<CallResult> {
+  const opened = await fetch(text(pick(payment.value, "redirectUrl")));
+  if (!opened.ok) throw new Error(`the stand-in's 3-D Secure page answered ${opened.status}`);
+  await session.standIn.settled();
+  return call(session, name, "GetPayment", [text(pick(payment.value, "id"))]);
+}
+
 /** A payment that Checkout.com challenges with 3-D Secure: a saving payment on the challenge card, for a new customer, which asks for the mandate. */
 export async function challenged(session: Session, name: string): Promise<CallResult> {
   const customer = await call(session, `CreateCustomer for ${name}`, "CreateCustomer", [{ email: `${fresh("payer")}@merchant.invalid` }, fresh("key"), null]);

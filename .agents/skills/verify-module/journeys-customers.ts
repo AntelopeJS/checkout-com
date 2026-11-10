@@ -1,6 +1,6 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, EUR, answered, call, callsTo, customerAtProvider, fresh, pay, paymentAtProvider, pick, same, thrown, withSession, text } from "./session.ts";
+import { CARDS, EUR, RETURN_URL, answered, call, callsTo, customerAtProvider, fresh, passRedirect, pay, paymentAtProvider, pick, same, thrown, withSession, text } from "./session.ts";
 
 const customerLifecycle: Journey = {
   title: "a customer needs an email, is found again with its details, has its email kept unique, and is gone once deleted",
@@ -38,20 +38,25 @@ const customerLifecycle: Journey = {
 };
 
 const savedCard: Journey = {
-  title: "a card saved by a payment is listed on its customer, charged off-session as a merchant-initiated payment chained to the saving payment, and gone once detached; the chain is recorded in the customer's metadata at Checkout.com",
-  entryPoint: "`CreatePayment` with `savePaymentMethod`, `ListPaymentMethods`, an `offSession` `CreatePayment` and `DetachPaymentMethod` through core",
+  title: "a card saved by a payment that passed 3-D Secure is listed on its customer, charged off-session as a merchant-initiated payment chained to the saving payment, and gone once detached; the chain is recorded in the customer's metadata at Checkout.com",
+  entryPoint: "`CreatePayment` with `savePaymentMethod`, the payer opening its 3-D Secure redirect, `GetPayment`, `ListPaymentMethods`, an `offSession` `CreatePayment` and `DetachPaymentMethod` through core",
   async run(context) {
     await withSession(context, async (session) => {
       const customer = await call(session, "CreateCustomer", "CreateCustomer", [{ email: `${fresh("grace")}@merchant.invalid` }, fresh("key"), null]);
       const customerId = text(pick(customer.value, "id"));
-      const saving = await pay(session, "CreatePayment saving the card", CARDS.approved, { request: { customer: customerId, savePaymentMethod: true, returnUrl: "https://merchant.invalid/return" } });
+      const saving = await pay(session, "CreatePayment saving the card", CARDS.approved, { request: { customer: customerId, savePaymentMethod: true, returnUrl: RETURN_URL } });
       const savingId = text(pick(saving.value, "id"));
-      const method = text(pick(saving.value, "paymentMethod"));
       const savingBody = callsTo(session.standIn, "POST", "/payments")[0]?.body;
       context.expect(saving.folder, [
         answered(saving),
-        same("the card is stored as an instrument", method.startsWith("src_"), true),
+        same("the saving payment waits for the payer's 3-D Secure, as every 3-D Secure payment does at Checkout.com", pick(saving.value, "status"), "requires_action"),
         same("the saving payment starts the series, customer-initiated and with the mandate asked of 3-D Secure", [pick(savingBody, "merchant_initiated"), pick(savingBody, "payment_type"), pick(savingBody, "3ds", "challenge_indicator"), pick(savingBody, "source", "store_for_future_use")], [false, "Recurring", "challenge_requested_mandate", true]),
+      ], { critical: true });
+      const authenticated = await passRedirect(session, "GetPayment after the payer passed 3-D Secure", saving);
+      const method = text(pick(authenticated.value, "paymentMethod"));
+      context.expect(authenticated.folder, [
+        answered(authenticated),
+        same("the payment succeeded and the card is stored as an instrument", [pick(authenticated.value, "status"), method.startsWith("src_")], ["succeeded", true]),
       ], { critical: true });
       const listed = await call(session, "ListPaymentMethods", "ListPaymentMethods", [customerId, null]);
       context.expect(listed.folder, [
