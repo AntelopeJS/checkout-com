@@ -129,7 +129,7 @@ export function PaymentAccepted(
   return view;
 }
 
-/** `GET /payments/{id}`, from the documented captured-payment example. */
+/** `GET /payments/{id}`, from the documented captured-payment example; while the payer is in 3DS the source names no instrument, as on the sandbox (observed 2026-11-10). */
 export function PaymentDetails(
   state: SimState,
   payment: SimPayment,
@@ -152,7 +152,9 @@ export function PaymentDetails(
   delete body.eci;
   if (payment.description) body.description = payment.description;
   if (payment.metadata) body.metadata = { ...payment.metadata };
-  return withParties(state, payment, body);
+  const view = withParties(state, payment, body);
+  if (payment.redirectUrl) view.source = { type: "card" };
+  return view;
 }
 
 /** `GET /payments/{id}/actions`, latest first, as the docs' example shows. */

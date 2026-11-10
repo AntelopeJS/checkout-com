@@ -4,6 +4,7 @@ import {
   CreatePayment,
   DetachPaymentMethod,
   GetCustomer,
+  GetPayment,
   ListPaymentMethods,
   PAYMENT_METHOD_TYPES,
   type PaymentMethod,
@@ -184,5 +185,31 @@ describe("[checkout-com] saved payment methods without a record", function () {
     const [method] = await ListPaymentMethods(customer.id);
     assert.equal(method.createdAt, 0);
     assert.deepEqual((await GetCustomer(customer.id)).metadata, metadata);
+  });
+});
+
+describe("[checkout-com] metadata the module owns", function () {
+  this.timeout(SUITE_TIMEOUT);
+
+  it("takes no caller metadata for the module's own record of a save", async function () {
+    const target = SuiteTarget();
+    if (!target.publicKey) this.skip();
+    const instrument = await MintInstrument(target, TEST_CARDS.approved);
+    const other = await CreateCustomer({ email: email() }, key());
+    const charge = await CreatePayment(
+      {
+        amount: CHARGE,
+        reference: reference(),
+        paymentMethod: instrument,
+        metadata: { antelope_save_for: other.id },
+      },
+      key(),
+    );
+    await GetPayment(charge.id);
+    assert.deepEqual(
+      await ListPaymentMethods(other.id),
+      [],
+      "a payment that did not ask to save links and records nothing",
+    );
   });
 });

@@ -142,11 +142,19 @@ function ReadMetadata(
   return Object.fromEntries(own.map(([key, value]) => [key, String(value)]));
 }
 
+/**
+ * The metadata sent with a payment: the caller's, without any key this module
+ * owns, so a caller's value is never read back as one of the module's
+ * markers, and then the module's own entries.
+ */
 export function WriteMetadata(
   metadata: Record<string, string> | undefined,
   internal: Record<string, string>,
 ): CkoMetadata {
-  return { ...metadata, ...internal };
+  const own = Object.entries(metadata ?? {}).filter(
+    ([key]) => !INTERNAL_KEYS.has(key),
+  );
+  return { ...Object.fromEntries(own), ...internal };
 }
 
 /**

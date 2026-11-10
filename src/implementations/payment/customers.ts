@@ -99,7 +99,7 @@ export async function CreateCustomer(
   const { client } = GetAccount(provider);
   const fingerprint = keyFingerprint(idempotencyKey);
   const metadata = {
-    ...request.metadata,
+    ...callerMetadata(request.metadata),
     [IdempotencyMetadataKey()]: fingerprint,
   };
   const sent: CkoCustomerRequest = { email, metadata };
