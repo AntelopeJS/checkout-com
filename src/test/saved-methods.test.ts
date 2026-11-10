@@ -11,12 +11,14 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { MintInstrument } from "./mint";
+import { isCustomer } from "./raw";
 import { TEST_CARDS } from "./constants";
 import { CurrentStandIn } from "./standin";
 import type { JsonObject } from "./standin/wire";
 import {
   CardToken,
   PassAuthentication,
+  ReadRaw,
   RequireStandIn,
   SUITE_TIMEOUT,
   Settled,
@@ -242,6 +244,36 @@ describe("[checkout-com] metadata the module owns", function () {
       await ListPaymentMethods(other.id),
       [],
       "a payment that did not ask to save links and records nothing",
+    );
+  });
+
+  it("drops a detached card's record from its customer", async function () {
+    const token = await CardToken(this, TEST_CARDS.approved);
+    const customer = await CreateCustomer({ email: email() }, key());
+    const saved = await PassAuthentication(
+      this,
+      await CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: token,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ),
+    );
+    const [method] = await ListPaymentMethods(customer.id);
+    assert.ok(method.createdAt > EPOCH_MILLIS_FLOOR, "the card was recorded");
+    await DetachPaymentMethod(method.id, key());
+    const stored = await ReadRaw(`/customers/${customer.id}`, isCustomer);
+    assert.deepEqual(
+      Object.keys(stored.metadata ?? {}).filter((field) =>
+        field.startsWith("antelope_method_"),
+      ),
+      [],
+      `no record of ${saved.paymentMethod} is left`,
     );
   });
 });

@@ -83,6 +83,11 @@ const ROUTES: readonly Route[] = [
     handle: (p, r) => p.patchCustomer(r),
   },
   {
+    method: "GET",
+    path: /^\/instruments\/(\w+)$/,
+    handle: (p, r) => p.getInstrument(r),
+  },
+  {
     method: "PATCH",
     path: /^\/instruments\/(\w+)$/,
     handle: (p, r) => p.linkInstrument(r),
@@ -326,6 +331,15 @@ export class Provider {
     }
     this.noteRecords();
     return reply(204);
+  }
+
+  /** As the sandbox answers it: the linked customer when there is one, 404 once deleted. */
+  getInstrument({ id }: Routed): Reply {
+    const instrument = this.instruments.get(id);
+    if (!instrument) return NOT_FOUND;
+    return instrument.customer
+      ? reply(200, { id, type: "card", customer: { id: instrument.customer } })
+      : reply(200, { id, type: "card" });
   }
 
   linkInstrument({ body, id }: Routed): Reply {

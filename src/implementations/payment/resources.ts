@@ -107,7 +107,7 @@ export const IsCkoActionAccepted = ObjectWith<CkoActionAccepted>({
   reference: Optional(IsText),
 });
 
-const IsCkoInstrument = ObjectWith<CkoInstrument>({
+export const IsCkoInstrument = ObjectWith<CkoInstrument>({
   id: IsText,
   type: IsText,
   scheme: Optional(IsText),

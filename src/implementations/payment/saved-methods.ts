@@ -1,4 +1,4 @@
-import { IsCkoCustomer } from "./resources";
+import { IsCkoCustomer, IsCkoInstrument } from "./resources";
 import type { Payment } from "@antelopejs/interface-payment";
 
 import type { CkoClient } from "./http";
@@ -167,5 +167,53 @@ export async function RememberSave(
     process.stderr.write(
       `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the next read of the payment retries\n`,
     );
+  });
+}
+
+async function pruneRecords(client: CkoClient, customerId: string) {
+  const { body: customer } = await client.send(
+    { method: "GET", path: `/customers/${customerId}` },
+    IsCkoCustomer,
+  );
+  const kept = prunedMetadata(customer);
+  const held = Object.keys(customer.metadata ?? {}).length;
+  if (Object.keys(kept).length === held) return;
+  await client.execute({
+    method: "PATCH",
+    path: `/customers/${customerId}`,
+    body: { metadata: kept },
+  });
+}
+
+/**
+ * Deletes a saved instrument and, when it belongs to a customer, the record of
+ * the payment that saved it. Both run in the customer's chain of record
+ * writes, so a record being written for the same card in this process lands
+ * before the card is deleted and is pruned with it. The instrument is gone
+ * once this resolves; a failed prune is reported, and the customer's next
+ * save prunes it.
+ */
+export async function DeleteSavedMethod(
+  client: CkoClient,
+  instrument: string,
+): Promise<void> {
+  const { body } = await client.send(
+    { method: "GET", path: `/instruments/${instrument}` },
+    IsCkoInstrument,
+  );
+  const remove = () =>
+    client.execute({ method: "DELETE", path: `/instruments/${instrument}` });
+  const customer = body.customer?.id;
+  if (!customer) {
+    await remove();
+    return;
+  }
+  await oneAtATime(customer, async () => {
+    await remove();
+    await pruneRecords(client, customer).catch((cause: unknown) => {
+      process.stderr.write(
+        `Checkout.com: ${instrument} was deleted but pruning its record from ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the customer's next save prunes it\n`,
+      );
+    });
   });
 }

@@ -38,9 +38,7 @@ const GATED: Semantics = "replace";
 const OBSERVED: Semantics = "merge";
 
 /** The rules the module breaks today, with the states of each shrunk counterexample at the pinned seed. */
-const FINDINGS = new Map<string, number>([
-  ["NoRecordOutlivesInstrument_replace", 6],
-]);
+const FINDINGS = new Map<string, number>();
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
