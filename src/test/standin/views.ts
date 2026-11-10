@@ -58,6 +58,7 @@ function paymentLinks(baseUrl: string, payment: SimPayment): JsonObject {
   if (payment.balances.available_to_refund > 0) {
     links.refund = link(baseUrl, `${path}/refunds`);
   }
+  if (payment.redirectUrl) links.redirect = { href: payment.redirectUrl };
   return links;
 }
 
@@ -106,7 +107,7 @@ export function PaymentResponse(
   return withParties(state, payment, body);
 }
 
-/** `POST /payments` 202, from the documented 3DS redirect example. */
+/** `POST /payments` 202, from the documented 3DS redirect example: no `source` until the payer is past 3DS. */
 export function PaymentAccepted(
   state: SimState,
   payment: SimPayment,
@@ -124,7 +125,7 @@ export function PaymentAccepted(
   };
   delete body.instruction;
   const view = withParties(state, payment, body);
-  if (view.source) view.source = { type: "id", id: payment.instrument };
+  delete view.source;
   return view;
 }
 

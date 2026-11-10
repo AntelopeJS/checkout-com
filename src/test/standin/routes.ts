@@ -7,6 +7,7 @@ import {
   GetActions,
   GetPayment,
   Refund,
+  VisitRedirect,
   Void,
 } from "./payments";
 import {
@@ -67,6 +68,9 @@ export function Routes(context: SimContext): Route[] {
       idempotent,
     ),
     route("GET", "/payments/{}", (_r, [id]) => GetPayment(context, id)),
+    route("GET", "/3ds/{}", (_r, [id]) => VisitRedirect(context, id), {
+      isOpen: true,
+    }),
     route("GET", "/payments/{}/actions", (_r, [id]) => GetActions(context, id)),
     route(
       "POST",

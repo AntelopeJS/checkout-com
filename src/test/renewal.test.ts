@@ -14,6 +14,7 @@ import { CurrentStandIn } from "./standin";
 import { ObjectOf } from "./standin/wire";
 import {
   CardToken,
+  PassAuthentication,
   ReadRaw,
   SUITE_TIMEOUT,
   WaitFor,
@@ -34,7 +35,7 @@ function wholeSecondsFromNow(ms: number): number {
 async function savedCard(context: Mocha.Context) {
   const token = await CardToken(context, TEST_CARDS.approved);
   const customer = await CreateCustomer({ email: email() }, key());
-  const saving = await CreatePayment(
+  const created = await CreatePayment(
     {
       amount: PERIOD,
       reference: reference(),
@@ -45,6 +46,7 @@ async function savedCard(context: Mocha.Context) {
     },
     key(),
   );
+  const saving = await PassAuthentication(context, created);
   const [method] = await ListPaymentMethods(customer.id);
   assert.ok(method, "the saving payment must leave a method on the customer");
   assert.equal(method.id, saving.paymentMethod);

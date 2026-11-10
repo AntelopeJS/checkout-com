@@ -13,7 +13,6 @@ import type {
 import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { SessionOnce } from "./session-replays";
-import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import { AssertCustomerId, AssertHostedPaymentId, IsPaymentId } from "./ids";
 import { LookUp } from "./lookup";
@@ -23,10 +22,7 @@ import type {
   CkoHostedPaymentRequest,
 } from "./cko-types";
 import {
-  AUTOMATIC_CAPTURE,
-  CAPTURE_KEY,
-  type InternalMetadata,
-  MANUAL_CAPTURE,
+  InternalMetadataOf,
   SAVE_FOR_KEY,
   ToEpochMillis,
   WriteMetadata,
@@ -137,16 +133,6 @@ function saving(
   };
 }
 
-function internalMetadata(request: CheckoutSessionRequest): InternalMetadata {
-  const internal: InternalMetadata = {
-    [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
-  };
-  if (request.savePaymentMethod && request.customer) {
-    internal[SAVE_FOR_KEY] = request.customer;
-  }
-  return internal;
-}
-
 async function buildRequest(
   account: Account,
   request: CheckoutSessionRequest,
@@ -161,7 +147,7 @@ async function buildRequest(
     failure_url: request.cancelUrl,
     capture: !request.authorizeOnly,
     processing_channel_id: account.processingChannelId,
-    metadata: WriteMetadata(request.metadata, internalMetadata(request)),
+    metadata: WriteMetadata(request.metadata, InternalMetadataOf(request)),
   };
   if (request.description) {
     sent.description = request.description;
@@ -223,11 +209,10 @@ async function sessionStatus(
   if (hosted.status !== RECEIVED || !IsPaymentId(hosted.payment_id)) {
     return LookUp(STATUS_BY_HOSTED, hosted.status) ?? "pending";
   }
-  const payment = await LoadPayment(account.client, hosted.payment_id);
-  await RememberHostedSave(
+  const payment = await LoadPayment(
     account.client,
+    hosted.payment_id,
     hosted.metadata?.[SAVE_FOR_KEY],
-    payment,
   );
   return payment.status;
 }

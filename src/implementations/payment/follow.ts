@@ -4,7 +4,13 @@ import type { Payment } from "@antelopejs/interface-payment";
 
 import type { CkoClient } from "./http";
 import type { CkoAction, CkoPayment } from "./cko-types";
-import { ToFailure, ToPayment, type PaymentContext } from "./mapping";
+import { RememberSave } from "./saved-methods";
+import {
+  SAVE_FOR_KEY,
+  ToFailure,
+  ToPayment,
+  type PaymentContext,
+} from "./mapping";
 
 const POLL_INTERVAL_MS = 200;
 const DECLINED = "Declined";
@@ -51,12 +57,20 @@ async function declineContext(
     : {};
 }
 
+/**
+ * Reads a payment for the contract, and records the card it saved once it
+ * carries one. The customer to save for is the payment's own marker, or the
+ * one its hosted session gives as `saveFor`.
+ */
 export async function LoadPayment(
   client: CkoClient,
   id: string,
+  saveFor?: Parameters<typeof RememberSave>[1],
 ): Promise<Payment> {
-  const payment = await ReadPayment(client, id);
-  return ToPayment(payment, await declineContext(client, payment));
+  const raw = await ReadPayment(client, id);
+  const payment = ToPayment(raw, await declineContext(client, raw));
+  await RememberSave(client, raw.metadata?.[SAVE_FOR_KEY] ?? saveFor, payment);
+  return payment;
 }
 
 /**

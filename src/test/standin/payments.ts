@@ -72,9 +72,14 @@ function isThreeDsRequested(body: JsonObject): boolean {
   return threeDs?.enabled === true || threeDs?.enabled === "true";
 }
 
-function needsChallenge(behaviour: CardBehaviour, body: JsonObject): boolean {
+/**
+ * The sandbox answers every 3DS payment on an enrolled card with a redirect,
+ * frictionless cards included (observed 2026-11-10): authentication runs in
+ * the payer's browser either way.
+ */
+function needsRedirect(behaviour: CardBehaviour, body: JsonObject): boolean {
   if (behaviour.threeDs === "upgrade") return true;
-  return behaviour.threeDs === "challenge" && isThreeDsRequested(body);
+  return behaviour.threeDs !== "not_enabled" && isThreeDsRequested(body);
 }
 
 function decide(behaviour: CardBehaviour, body: JsonObject): CardBehaviour {
@@ -178,7 +183,7 @@ export function SubmitPayment(
   const payment = newPayment(body, money, source.instrument, source.customer);
   context.state.payments.set(payment.id, payment);
   const behaviour = CardOutcome(source.card, payment.amount);
-  if (needsChallenge(behaviour, body)) {
+  if (needsRedirect(behaviour, body)) {
     payment.redirectUrl = `${context.baseUrl}/3ds/${payment.id}`;
     context.challenges.set(payment.id, { behaviour, commit: source.commit });
     source.commit(true);
@@ -226,6 +231,18 @@ export function CompleteChallenge(
   );
   payment.redirectUrl = undefined;
   challenge.commit(payment.approved);
+}
+
+/**
+ * The payer's browser opening the redirect. A frictionless card authenticates
+ * without the payer doing anything; a challenged one waits for their answer.
+ */
+export function VisitRedirect(context: SimContext, id: string): StandInReply {
+  const challenge = context.challenges.get(id);
+  if (challenge?.behaviour.threeDs === "frictionless") {
+    CompleteChallenge(context, id, true);
+  }
+  return { status: OK };
 }
 
 function found(context: SimContext, id: string): SimPayment {
