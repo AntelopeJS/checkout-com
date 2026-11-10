@@ -1,7 +1,9 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, EUR, answered, call, callsTo, fresh, pick, same, thrown, withSession, text } from "./session.ts";
+import { recordOf } from "./json.ts";
+import { CARDS, EUR, answered, call, callsTo, customerAtProvider, fresh, pick, same, thrown, withSession, text } from "./session.ts";
 
+const METHOD_PREFIX = "antelope_method_";
 const REQUEST = { amount: EUR, successUrl: "https://shop.invalid/ok", cancelUrl: "https://shop.invalid/cancel", description: "Order 42" };
 
 const hostedSession: Journey = {
@@ -61,4 +63,46 @@ const hostedRefused: Journey = {
   },
 };
 
-export const checkoutJourneys = { "hosted-session": hostedSession, "hosted-refused": hostedRefused };
+const hostedSavedCard: Journey = {
+  title: "a card the payer saves on the hosted page is recorded on the customer once the session is read, and an off-session charge of it is chained to the payment that saved it",
+  entryPoint: "`CreateCheckoutSession` with `customer` and `savePaymentMethod`, the payer paying the page at the stand-in, `GetCheckoutSession`, `ListPaymentMethods` and an `offSession` `CreatePayment` through core",
+  async run(context) {
+    await withSession(context, async (session) => {
+      const customer = await call(session, "CreateCustomer", "CreateCustomer", [{ email: `${fresh("hedy")}@merchant.invalid` }, fresh("key"), null]);
+      const customerId = text(pick(customer.value, "id"));
+      const created = await call(session, "CreateCheckoutSession saving the card", "CreateCheckoutSession", [{ ...REQUEST, reference: fresh("order"), customer: customerId, savePaymentMethod: true }, fresh("key"), null]);
+      const sent = callsTo(session.standIn, "POST", "/hosted-payments")[0]?.body;
+      context.expect(created.folder, [
+        answered(created),
+        same("the page was asked to store the card", pick(sent, "payment_method_configuration", "card", "store_payment_details"), "enabled"),
+        same("the page starts the series: Recurring, with 3-D Secure asking for the mandate", [pick(sent, "payment_type"), pick(sent, "3ds", "enabled"), pick(sent, "3ds", "challenge_indicator")], ["Recurring", true, "challenge_requested_mandate"]),
+      ], { critical: true });
+      const sessionId = text(pick(created.value, "id"));
+      const savedAfter = Date.now();
+      const paymentId = session.standIn.payHostedPage(sessionId, CARDS.approved);
+      await session.standIn.settled();
+      const paid = await call(session, "GetCheckoutSession after payment", "GetCheckoutSession", [sessionId]);
+      context.expect(paid.folder, [answered(paid), same("the paid page carries the payment and it succeeded", [pick(paid.value, "payment"), pick(paid.value, "status")], [paymentId, "succeeded"])], { critical: true });
+      const record = recordOf(pick(await customerAtProvider(session, customerId), "metadata"));
+      const recorded = Object.keys(record).filter((key) => key.startsWith(METHOD_PREFIX));
+      const method = (recorded[0] ?? "").slice(METHOD_PREFIX.length);
+      const entry = text(record[recorded[0] ?? ""]).split(" ");
+      context.expect(paid.folder, [
+        same("reading the paid session recorded one card on the customer at Checkout.com, before anything listed it", [recorded.length, method.startsWith("src_")], [1, true]),
+        same("the record holds the hosted payment under the card", entry[0], paymentId),
+        same("followed by the time it was saved, in epoch milliseconds", [/^\d+$/.test(entry[1] ?? ""), Number(entry[1]) >= savedAfter && Number(entry[1]) <= Date.now()], [true, true]),
+      ], { critical: true });
+      const listed = await call(session, "ListPaymentMethods", "ListPaymentMethods", [customerId, null]);
+      context.expect(listed.folder, [answered(listed), same("the customer lists that card", [pick(listed.value, 0, "id"), pick(listed.value, 0, "card", "last4")], [method, "6584"])], { critical: true });
+      const reference = fresh("renewal");
+      const charge = await call(session, "CreatePayment off-session", "CreatePayment", [{ amount: EUR, reference, customer: customerId, paymentMethod: method, offSession: true }, fresh("key"), null]);
+      const chargeBody = callsTo(session.standIn, "POST", "/payments").find((entry) => pick(entry.body, "reference") === reference)?.body;
+      context.expect(charge.folder, [
+        answered(charge),
+        same("the off-session charge is merchant-initiated and chained to the payment the hosted page made", [pick(chargeBody, "merchant_initiated"), pick(chargeBody, "previous_payment_id")], [true, paymentId]),
+      ]);
+    });
+  },
+};
+
+export const checkoutJourneys = { "hosted-session": hostedSession, "hosted-refused": hostedRefused, "hosted-saved-card": hostedSavedCard };

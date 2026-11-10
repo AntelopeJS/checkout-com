@@ -1,6 +1,8 @@
 ---
 covers:
   - src/implementations/payment/customers.ts
+  - src/implementations/payment/payments.ts
+  - src/implementations/payment/follow.ts
   - src/implementations/payment/saved-methods.ts
   - src/implementations/payment/mapping.ts
   - src/implementations/payment/accounts.ts

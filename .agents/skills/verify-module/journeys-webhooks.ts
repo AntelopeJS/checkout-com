@@ -1,6 +1,7 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, SECONDARY_AUTHORIZATION, SECONDARY_WEBHOOK_KEY, answered, call, delivery, pay, pick, same, thrown, withSession, text } from "./session.ts";
+import { recordOf } from "./json.ts";
+import { CARDS, SECONDARY_AUTHORIZATION, SECONDARY_WEBHOOK_KEY, answered, call, delivery, pay, paymentAtProvider, pick, same, thrown, withSession, text } from "./session.ts";
 
 const webhookSignature: Journey = {
   title: "a delivery is accepted only when its Cko-Signature is the HMAC-SHA256 of the raw body under the account's key, and an account that was given an Authorization value also needs it back",
@@ -35,6 +36,38 @@ const webhookSignature: Journey = {
       ]);
       const authorized = await call(session, "VerifyWebhook on the secondary account with its authorization", "VerifyWebhook", [{ ...foreign, headers: { ...foreign.headers, authorization: SECONDARY_AUTHORIZATION } }, "secondary"]);
       context.expect(authorized.folder, [answered(authorized), same("with both, the secondary account accepts it", pick(authorized.value, "type"), "payment.succeeded")]);
+      const digest = signed.headers["cko-signature"] ?? "";
+      const accepting: [string, string][] = [
+        ["a digest in upper-case hex", digest.toUpperCase()],
+        ["a digest with surrounding whitespace", `  ${digest}\t`],
+      ];
+      for (const [name, signature] of accepting) {
+        const read = await call(session, `VerifyWebhook with ${name}`, "VerifyWebhook", [{ ...signed, headers: { ...signed.headers, "cko-signature": signature } }, null]);
+        context.expect(read.folder, [answered(read), same(`${name} is accepted as the same signature`, [pick(read.value, "type"), pick(read.value, "payment", "id")], ["payment.succeeded", id])]);
+      }
+      const wrongLength: [string, string][] = [
+        ["a 62-hex-digit digest", digest.slice(0, 62)],
+        ["a 66-hex-digit digest", `${digest}ab`],
+      ];
+      for (const [name, signature] of wrongLength) {
+        const refused = await call(session, `VerifyWebhook with ${name}`, "VerifyWebhook", [{ ...signed, headers: { ...signed.headers, "cko-signature": signature } }, null]);
+        context.expect(refused.folder, [
+          same(`${name} is refused as a WebhookVerificationError`, pick(thrown(refused), 0), "WebhookVerificationError"),
+          same(`${name} is refused for not being a SHA-256 hex digest`, text(pick(thrown(refused), 1)).includes("hex"), true),
+        ]);
+      }
+      const nearMisses: [string, string][] = [
+        ["a wrong value", "verify-secondary-wrong"],
+        ["a prefix of the right value", SECONDARY_AUTHORIZATION.slice(0, -1)],
+        ["the right value with a trailing space", `${SECONDARY_AUTHORIZATION} `],
+      ];
+      for (const [name, value] of nearMisses) {
+        const refused = await call(session, `VerifyWebhook on the secondary account with ${name}`, "VerifyWebhook", [{ ...foreign, headers: { ...foreign.headers, authorization: value } }, "secondary"]);
+        context.expect(refused.folder, [
+          same(`the secondary account refuses ${name} as its Authorization header`, pick(thrown(refused), 0), "WebhookVerificationError"),
+          same("the refusal is about the Authorization header, not the signature", text(pick(thrown(refused), 1)).includes("Authorization"), true),
+        ]);
+      }
     });
   },
 };
@@ -60,6 +93,22 @@ const webhookEvents: Journey = {
       ]);
       const unmapped = await call(session, "VerifyWebhook of an unmapped event", "VerifyWebhook", [delivery("payment_something_new", { id }), null]);
       context.expect(unmapped.folder, [answered(unmapped), same("an event type the module does not map yields no event", unmapped.value, null)]);
+      const automaticId = text(pick(paid.value, "id"));
+      const automatic = await call(session, "VerifyWebhook of payment_approved for an automatic capture", "VerifyWebhook", [
+        delivery("payment_approved", { id: automaticId, metadata: recordOf(pick(await paymentAtProvider(session, automaticId), "metadata")) }),
+        null,
+      ]);
+      context.expect(automatic.folder, [answered(automatic), same("an approval of a payment Checkout.com captures by itself yields no event: the capture's own event follows", automatic.value, null)]);
+      const held = await pay(session, "CreatePayment authorize only", CARDS.approved, { request: { authorizeOnly: true } });
+      const heldId = text(pick(held.value, "id"));
+      const authorized = await call(session, "VerifyWebhook of payment_approved for an authorizeOnly payment", "VerifyWebhook", [
+        delivery("payment_approved", { id: heldId, metadata: recordOf(pick(await paymentAtProvider(session, heldId), "metadata")) }),
+        null,
+      ]);
+      context.expect(authorized.folder, [
+        answered(authorized),
+        same("an approval of an authorizeOnly payment is payment.authorized with the payment read back", [pick(authorized.value, "type"), pick(authorized.value, "payment", "id"), pick(authorized.value, "payment", "status")], ["payment.authorized", heldId, "authorized"]),
+      ]);
     });
   },
 };

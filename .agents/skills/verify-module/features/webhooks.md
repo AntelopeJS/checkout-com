@@ -30,8 +30,8 @@ An application route hands Checkout.com's raw delivery to `VerifyWebhook` and ge
 
 ## Sub-features
 
-- `webhook-signature`: a delivery signed with HMAC-SHA256 over the raw body under the account's key becomes an event; an altered body, a missing signature, a non-hex signature and a signature under another account's key are `WebhookVerificationError`; an account configured with `webhookAuthorization` also needs that value back.
-- `webhook-events`: `payment_refunded` is `refund.succeeded`, `payment_declined` is `payment.failed` with the payment read back, and an unmapped event type yields no event.
+- `webhook-signature`: a delivery signed with HMAC-SHA256 over the raw body under the account's key becomes an event; an altered body, a missing signature, a non-hex signature and a signature under another account's key are `WebhookVerificationError`; an account configured with `webhookAuthorization` also needs that value back. A digest in upper-case hex and one with surrounding whitespace are accepted; a 62- and a 66-hex-digit digest are refused; on the secondary account a wrong `Authorization` value, a prefix of the right one and the right one with a trailing space are each refused. This is the end-to-end view through core: the predicate itself is covered by the module's own tests.
+- `webhook-events`: `payment_refunded` is `refund.succeeded`, `payment_declined` is `payment.failed` with the payment read back, an unmapped event type yields no event, `payment_approved` for a payment the module created with automatic capture yields no event (the capture's own event follows), and `payment_approved` for an `authorizeOnly` payment is `payment.authorized` with the payment read back. Each approval carries the metadata the provider holds for the payment, as Checkout.com's delivery does.
 
 ## How to get to it (user POV)
 

@@ -22,6 +22,7 @@ docs:
 journeys:
   - hosted-session
   - hosted-refused
+  - hosted-saved-card
 ---
 
 # Checkout
@@ -32,6 +33,7 @@ An application module sends the payer to a Hosted Payments Page with `CreateChec
 
 - `hosted-session`: the page is requested with the amount, currency, reference, billing country and return URLs (the cancel URL doubling as failure URL), reads `pending` until the payer pays it, then carries the payment Checkout.com produced and that payment's status; a replay of the key returns the same page without a second request.
 - `hosted-refused`: without `checkoutBillingCountry` the call is a `PaymentError` naming it and sends nothing; an unknown session is `PaymentNotFoundError`.
+- `hosted-saved-card`: a session with `customer` and `savePaymentMethod` asks the page to store the card (`payment_method_configuration.card.store_payment_details: "enabled"`), as a Recurring payment with 3-D Secure asking for the mandate (`challenge_requested_mandate`). Once the payer pays it, `GetCheckoutSession` reads the payment (`LoadPayment`) and records the card on the customer: `ListPaymentMethods` returns it, and the customer's metadata at Checkout.com holds `antelope_method_<src_…>` = `<pay_…> <saved at, epoch ms>` for the hosted payment. An `offSession` charge of that card is merchant-initiated and carries `previous_payment_id` of the hosted payment.
 
 ## How to get to it (user POV)
 
