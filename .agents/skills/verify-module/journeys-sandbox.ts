@@ -1,27 +1,28 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, acceptedPaymentRequest, answered, fresh, pay, withSession } from "./session.ts";
+import { CARDS, EUR, acceptedPaymentRequest, answered, call, fresh, onSandboxAndStandIn, pay, pick, same, sent, settled, statusIs, text } from "./session.ts";
 
 const requestContract: Journey = {
-  title: "a request to Checkout.com is a JSON POST under the secret key as a bearer token, to the configured base URL",
-  entryPoint: "`CreatePayment` through core against the stand-in",
+  title: "a payment through core reaches the configured base URL under the secret key, lands on that account, and reads back succeeded",
+  entryPoint: "`CreatePayment` and `GetPayment` through core against the merchant's Checkout.com sandbox, then against the stand-in; the payment read back with the secret key at the configured base URL",
   async run(context) {
-    await withSession(context, async (session) => {
+    await onSandboxAndStandIn(context, async (session) => {
       const reference = fresh("order");
       const created = await pay(session, "CreatePayment", CARDS.approved, { request: { reference } });
-      context.expect(created.folder, [answered(created), ...acceptedPaymentRequest(session, reference)]);
+      context.expect(created.folder, [answered(created), ...(await sent(session, (target) => acceptedPaymentRequest(target, reference)))], { critical: true });
+      const id = text(pick(created.value, "id"));
+      const held = await settled(session, id, statusIs("Captured"));
+      context.expect(created.folder, [
+        same(
+          "the account behind the configured base URL and secret key holds this payment, captured, with the amount, currency and reference sent",
+          [pick(held, "id"), pick(held, "status"), pick(held, "amount"), pick(held, "currency"), pick(held, "reference")],
+          [id, "Captured", EUR.value, EUR.currency, reference],
+        ),
+      ]);
+      const read = await call(session, "GetPayment", "GetPayment", [id]);
+      context.expect(read.folder, [answered(read), same("the payment reads succeeded", pick(read.value, "status"), "succeeded")]);
     });
   },
 };
 
-const sandboxLive: Journey = {
-  title: "the module against Checkout.com's own sandbox",
-  entryPoint: "`CreatePayment` against the merchant's sandbox base URL with a sandbox key",
-  run(context) {
-    return Promise.resolve(
-      context.notVerified("no journey reaches Checkout.com's sandbox: it needs the merchant's sk_sbox_ key, processing channel and base URL, which only the operator holds; the module's own `pnpm test` runs live with CKO_SECRET_KEY and CKO_PROCESSING_CHANNEL_ID"),
-    );
-  },
-};
-
-export const sandboxJourneys = { "request-contract": requestContract, "sandbox-live": sandboxLive };
+export const sandboxJourneys = { "request-contract": requestContract };

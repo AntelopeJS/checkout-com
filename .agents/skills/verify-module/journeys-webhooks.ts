@@ -1,16 +1,16 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
 import { recordOf } from "./json.ts";
-import { CARDS, SECONDARY_AUTHORIZATION, SECONDARY_WEBHOOK_KEY, answered, call, delivery, pay, paymentAtProvider, pick, same, thrown, withSession, text } from "./session.ts";
+import { CARDS, SECONDARY_AUTHORIZATION, SECONDARY_WEBHOOK_KEY, answered, call, delivery, onSandboxAndStandIn, pay, paymentAtProvider, pick, same, settled, statusIs, thrown, text } from "./session.ts";
 
 const webhookSignature: Journey = {
   title: "a delivery is accepted only when its Cko-Signature is the HMAC-SHA256 of the raw body under the account's key, and an account that was given an Authorization value also needs it back",
-  entryPoint: "`VerifyWebhook` through core with deliveries signed the way Checkout.com's workflow signs them",
+  entryPoint: "`VerifyWebhook` through core with deliveries signed the way Checkout.com's workflow signs them, against the Checkout.com sandbox, then against the stand-in",
   async run(context) {
-    await withSession(context, async (session) => {
+    await onSandboxAndStandIn(context, async (session) => {
       const paid = await pay(session, "CreatePayment", CARDS.approved);
       const id = text(pick(paid.value, "id"));
-      await session.standIn.settled();
+      await settled(session, id, statusIs("Captured"));
       const signed = delivery("payment_captured", { id, action_id: "act_verify" });
       const accepted = await call(session, "VerifyWebhook of a genuine delivery", "VerifyWebhook", [signed, null]);
       context.expect(accepted.folder, [
@@ -74,12 +74,12 @@ const webhookSignature: Journey = {
 
 const webhookEvents: Journey = {
   title: "genuine deliveries become the interface's events: a refund settles as refund.succeeded, a decline as payment.failed, and an event type the module does not map is ignored",
-  entryPoint: "`VerifyWebhook` through core with signed `payment_refunded`, `payment_declined` and unmapped deliveries",
+  entryPoint: "`VerifyWebhook` through core with signed `payment_refunded`, `payment_declined`, `payment_approved` and unmapped deliveries, against the Checkout.com sandbox, then against the stand-in",
   async run(context) {
-    await withSession(context, async (session) => {
+    await onSandboxAndStandIn(context, async (session) => {
       const paid = await pay(session, "CreatePayment", CARDS.approved);
       const id = text(pick(paid.value, "id"));
-      await session.standIn.settled();
+      await settled(session, id, statusIs("Captured"));
       const refunded = await call(session, "VerifyWebhook of payment_refunded", "VerifyWebhook", [delivery("payment_refunded", { id, action_id: "act_refund", amount: 1000, currency: "EUR" }), null]);
       context.expect(refunded.folder, [
         answered(refunded),

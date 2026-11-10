@@ -1,16 +1,9 @@
 import { createHmac } from "node:crypto";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 
-import {
-  equal,
-  type App,
-  type CallResult,
-  type Check,
-  type JourneyContext,
-} from "@antelopejs/tooling-configs/verify";
+import { equal, type App, type CallResult, type Check, type JourneyContext } from "@antelopejs/tooling-configs/verify";
 
 import { canonical, isNumber, isRecord, isString, parseJson, pick, text, tuple, type Json } from "./json.ts";
+import { sandboxTarget, startStandIn, type Keys, type StandIn, type StandInTarget, type Target } from "./targets.ts";
 
 export { pick, text, tuple, type Json } from "./json.ts";
 export type ModuleConfig = NonNullable<NonNullable<Parameters<JourneyContext["fixture"]>[0]>["moduleConfig"]>;
@@ -28,6 +21,9 @@ export const CARDS = {
 
 export const EUR = { value: 2500, currency: "EUR" } as const;
 
+/** A well-formed customer id that names no customer. The sandbox refuses the all-zero id as an invalid request (422) instead of answering 404. */
+export const UNKNOWN_CUSTOMER = "cus_aaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 /** One call the stand-in answered, as it recorded it. */
 export interface RecordedCall {
   method: string;
@@ -36,56 +32,6 @@ export interface RecordedCall {
   body: Json;
   status: number;
   replayed: boolean;
-}
-
-/** The stand-in for Checkout.com's API that the module's own suite uses (`src/test/standin`), as the built suite exports it. */
-export interface StandIn {
-  start(): Promise<string>;
-  stop(): Promise<void>;
-  settled(): Promise<void>;
-  completeChallenge(paymentId: string, isAuthenticated: boolean): void;
-  refuseNextRefund(): void;
-  payHostedPage(sessionId: string, cardNumber: string): string;
-  readonly calls: readonly object[];
-}
-
-function isStandIn(value: unknown): value is StandIn {
-  return (
-    isRecord(value) &&
-    typeof value.start === "function" &&
-    typeof value.stop === "function" &&
-    typeof value.settled === "function" &&
-    typeof value.completeChallenge === "function" &&
-    typeof value.refuseNextRefund === "function" &&
-    typeof value.payHostedPage === "function" &&
-    Array.isArray(value.calls)
-  );
-}
-
-function isText(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function isConstructor(value: unknown): value is new () => object {
-  return typeof value === "function";
-}
-
-export interface Keys {
-  secretKey: string;
-  publicKey: string;
-  processingChannel: string;
-}
-
-async function loadStandIn(repo: string): Promise<{ standIn: StandIn; keys: Keys }> {
-  const loaded: unknown = await import(pathToFileURL(join(repo, "dist/test/standin/index.js")).href);
-  const exported = isRecord(loaded) ? loaded : {};
-  const { STAND_IN_SECRET_KEY: secretKey, STAND_IN_PUBLIC_KEY: publicKey, STAND_IN_PROCESSING_CHANNEL: processingChannel, StandIn: StandInClass } = exported;
-  if (!isText(secretKey) || !isText(publicKey) || !isText(processingChannel) || !isConstructor(StandInClass)) {
-    throw new Error("dist/test/standin does not export StandIn and the stand-in keys: run the build first");
-  }
-  const instance: unknown = Reflect.construct(StandInClass, []);
-  if (!isStandIn(instance)) throw new Error("the stand-in does not have the members the skill drives");
-  return { standIn: instance, keys: { secretKey, publicKey, processingChannel } };
 }
 
 function toCall(entry: Json): RecordedCall | null {
@@ -97,32 +43,31 @@ function toCall(entry: Json): RecordedCall | null {
   return { method, path, idempotencyKey: isString(idempotencyKey) ? idempotencyKey : null, body: pick(entry, "body") ?? null, status, replayed: pick(entry, "replayed") === true };
 }
 
-/** The calls the stand-in has answered so far, oldest first. */
-export function callsOf(standIn: StandIn): RecordedCall[] {
+/** The calls to one endpoint the stand-in has answered so far, oldest first. */
+export function callsTo(standIn: StandIn, method: string, path: string): RecordedCall[] {
   return standIn.calls.flatMap((entry) => {
     const call = toCall(parseJson(JSON.stringify(entry)));
-    return call === null ? [] : [call];
+    return call !== null && call.method === method && call.path === path ? [call] : [];
   });
 }
 
-/** The calls to one endpoint, oldest first. */
-export function callsTo(standIn: StandIn, method: string, path: string): RecordedCall[] {
-  return callsOf(standIn).filter((call) => call.method === method && call.path === path);
-}
-
+/** The module loaded in `ajs project dev`, pointed at one target. */
 export interface Session {
   context: JourneyContext;
   app: App;
-  standIn: StandIn;
-  base: string;
-  keys: Keys;
+  target: Target;
+}
+
+/** A session on the stand-in, for a journey that pulls one of its levers: the payer's side of a challenge or a hosted page, or a refusal the sandbox does not make. */
+export interface StandInSession extends Session {
+  target: StandInTarget;
 }
 
 function accountConfig(base: string, keys: Keys): ModuleConfig {
   return { secretKey: keys.secretKey, processingChannelId: keys.processingChannel, baseUrl: base };
 }
 
-/** The module config for a session: the default account, and a `secondary` one with its own keys, `Unscheduled` charges and a required webhook authorization. */
+/** The module config for a session: the default account, and a `secondary` one with the same keys, `Unscheduled` charges and its own webhook key and required authorization. */
 export function sessionConfig(base: string, keys: Keys, overrides: ModuleConfig = {}): ModuleConfig {
   return {
     ...accountConfig(base, keys),
@@ -140,40 +85,56 @@ export function sessionConfig(base: string, keys: Keys, overrides: ModuleConfig 
   };
 }
 
-/** Starts the stand-in, loads the module in `ajs project dev` with its `baseUrl` and keys, and hands both to `run`. */
-export async function withSession(context: JourneyContext, run: (session: Session) => Promise<void>, overrides: ModuleConfig = {}): Promise<void> {
-  const { standIn, keys } = await loadStandIn(context.repo);
-  const base = await standIn.start();
+function startApp(context: JourneyContext, target: Target, overrides: ModuleConfig): Promise<App> {
+  const project = context.fixture({ moduleConfig: sessionConfig(target.base, target.keys, overrides) });
+  return context.dev(`ajs-project-dev on the ${target.name}`, project);
+}
+
+/** Starts a fresh stand-in, loads the module against it and hands both to `run`. */
+export async function onStandIn(context: JourneyContext, run: (session: StandInSession) => Promise<void>, overrides: ModuleConfig = {}): Promise<void> {
+  const target = await startStandIn(context.repo);
   try {
-    const project = context.fixture({ moduleConfig: sessionConfig(base, keys, overrides) });
-    const app = await context.dev("ajs-project-dev", project);
-    await run({ context, app, standIn, base, keys });
+    await run({ context, app: await startApp(context, target, overrides), target });
   } finally {
-    await standIn.stop();
+    await target.standIn.stop();
   }
 }
 
-export function call(session: Session, name: string, path: string, args: Json[]): Promise<CallResult> {
-  return session.context.call(name, session.app, { path: [path], args });
+/** Runs `run` against the merchant's Checkout.com sandbox, then again against a fresh stand-in, whose log answers the checks of what the module sent that the sandbox cannot show. */
+export async function onSandboxAndStandIn(context: JourneyContext, run: (session: Session) => Promise<void>, overrides: ModuleConfig = {}): Promise<void> {
+  const sandbox = sandboxTarget(context);
+  await run({ context, app: await startApp(context, sandbox, overrides), target: sandbox });
+  await onStandIn(context, run, overrides);
 }
 
-let counter = 0;
+/** Calls an interface function through core, as a step named after the target and `name`. */
+export function call(session: Session, name: string, path: string, args: Json[]): Promise<CallResult> {
+  return session.context.call(`${session.target.name}: ${name}`, session.app, { path: [path], args });
+}
 
-/** What this run's stand-in recorded of the one payment request a journey sent with `reference`: it is the only `POST /payments`, answered 201 or 202 (the stand-in answers 401 to any key but its secret key), and a JSON object carrying the amount, currency, reference and the configured processing channel. */
-export function acceptedPaymentRequest(session: Session, reference: string): Check[] {
-  const sent = callsTo(session.standIn, "POST", "/payments");
-  const body = sent[0]?.body;
+/** Checks of what the module sent. Only the stand-in logs requests, so `fromLog` judges them there; on the sandbox `atSandbox` reads Checkout.com's own view of the same fact, and a fact the sandbox does not show is left to the stand-in pass. */
+export async function sent(session: Session, fromLog: (target: StandInTarget) => Check[], atSandbox: () => Promise<Check[]> = () => Promise.resolve([])): Promise<Check[]> {
+  const { target } = session;
+  return target.standIn === null ? atSandbox() : fromLog({ ...target, standIn: target.standIn });
+}
+
+/** What the stand-in recorded of the one payment request a journey sent with `reference`: the only `POST /payments`, answered 201 or 202 (it answers 401 to any key but its secret key), and a JSON object carrying the amount, currency, reference and the configured processing channel. */
+export function acceptedPaymentRequest(target: StandInTarget, reference: string): Check[] {
+  const posted = callsTo(target.standIn, "POST", "/payments");
+  const body = posted[0]?.body;
   return [
-    same("the stand-in this run configured as baseUrl recorded exactly one payment request", sent.length, 1),
-    same("it answered 201 or 202, which only the configured secret key earns", [201, 202].includes(sent[0]?.status ?? 0), true),
+    same("the stand-in this run configured as baseUrl recorded exactly one payment request", posted.length, 1),
+    same("it answered 201 or 202, which only the configured secret key earns", [201, 202].includes(posted[0]?.status ?? 0), true),
     same("the request body is a JSON object", isRecord(body), true),
     same(
       "it carries the amount, currency, reference and the configured processing channel",
       [pick(body, "amount"), pick(body, "currency"), pick(body, "reference"), pick(body, "processing_channel_id")],
-      [EUR.value, EUR.currency, reference, session.keys.processingChannel],
+      [EUR.value, EUR.currency, reference, target.keys.processingChannel],
     ),
   ];
 }
+
+let counter = 0;
 
 /** A fresh idempotency key or reference, unique within the process. */
 export function fresh(prefix: string): string {
@@ -195,37 +156,32 @@ export function same(name: string, actual: Json | undefined | (Json | undefined)
   return equal(name, canonical(Array.isArray(actual) ? tuple(...actual) : actual), canonical(expected));
 }
 
-/** One request to the stand-in as a client of Checkout.com would send it; the answer is parsed JSON, or `null` when the body is empty. */
-export async function wire(base: string, method: string, path: string, key: string, body?: Json): Promise<{ status: number; json: Json }> {
-  const init: RequestInit = { method, headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" } };
-  if (body !== undefined) init.body = JSON.stringify(body);
-  const response = await fetch(new URL(path, base), init);
-  const text = await response.text();
-  return { status: response.status, json: text === "" ? null : parseJson(text) };
-}
-
 /** A single-use card token, minted with the public key as the payer's browser would. */
 export async function mintToken(session: Session, cardNumber: string): Promise<string> {
-  const minted = await wire(session.base, "POST", "/tokens", session.keys.publicKey, {
-    type: "card",
-    number: cardNumber,
-    expiry_month: 12,
-    expiry_year: new Date().getFullYear() + 3,
-    cvv: "100",
-  });
+  const { target } = session;
+  const minted = await target.request("POST", "/tokens", target.keys.publicKey, { type: "card", number: cardNumber, expiry_month: 12, expiry_year: new Date().getFullYear() + 3, cvv: "100" });
   const token = pick(minted.json, "token");
-  if (!isString(token)) throw new Error(`the stand-in minted no token: ${JSON.stringify(minted.json)}`);
-  return token;
+  return isString(token) ? token : session.context.notVerified(`the ${target.name} minted no token for a test card: it answered ${minted.status}`);
 }
 
-/** What the stand-in holds for a payment, read with the secret key and not through the module. */
+/** What Checkout.com holds for a payment, read with the secret key and not through the module. */
 export async function paymentAtProvider(session: Session, id: string): Promise<Json> {
-  return (await wire(session.base, "GET", `/payments/${id}`, session.keys.secretKey)).json;
+  return (await session.target.request("GET", `/payments/${id}`, session.target.keys.secretKey)).json;
 }
 
-/** What the stand-in holds for a customer, read with the secret key and not through the module. */
+/** What Checkout.com holds for a customer, read with the secret key and not through the module. */
 export async function customerAtProvider(session: Session, id: string): Promise<Json> {
-  return (await wire(session.base, "GET", `/customers/${id}`, session.keys.secretKey)).json;
+  return (await session.target.request("GET", `/customers/${id}`, session.target.keys.secretKey)).json;
+}
+
+/** A provider payment's `status` is `status`. */
+export function statusIs(status: string): (held: Json) => boolean {
+  return (held) => pick(held, "status") === status;
+}
+
+/** The payment as Checkout.com holds it once `until` holds: the stand-in applies what it accepted at once, the sandbox is read until it shows or the target's budget runs out. */
+export function settled(session: Session, id: string, until: (held: Json) => boolean): Promise<Json> {
+  return session.target.settle(() => paymentAtProvider(session, id), until);
 }
 
 /** How `pay` differs from its defaults: request fields, the idempotency key and the account. */
@@ -253,12 +209,14 @@ export function delivery(type: string, data: Record<string, Json>, signatureKey:
 
 export const RETURN_URL = "https://merchant.invalid/return";
 
-/** The payer's browser opening a payment's 3-D Secure redirect, which authenticates a frictionless card; then `GetPayment` once the stand-in has applied what followed. */
+const PAST_AUTHENTICATION_AND_CAPTURE = new Set(["Pending", "Authorized"]);
+
+/** The payer's browser opening a payment's 3-D Secure redirect, which authenticates a frictionless card; then `GetPayment` once Checkout.com holds the payment past authentication and the capture that follows. */
 export async function passRedirect(session: Session, name: string, payment: CallResult): Promise<CallResult> {
-  const opened = await fetch(text(pick(payment.value, "redirectUrl")));
-  if (!opened.ok) throw new Error(`the stand-in's 3-D Secure page answered ${opened.status}`);
-  await session.standIn.settled();
-  return call(session, name, "GetPayment", [text(pick(payment.value, "id"))]);
+  const id = text(pick(payment.value, "id"));
+  await session.target.openRedirect(text(pick(payment.value, "redirectUrl")));
+  await settled(session, id, (held) => !PAST_AUTHENTICATION_AND_CAPTURE.has(text(pick(held, "status"))));
+  return call(session, name, "GetPayment", [id]);
 }
 
 /** A payment that Checkout.com challenges with 3-D Secure: a saving payment on the challenge card, for a new customer, which asks for the mandate. */

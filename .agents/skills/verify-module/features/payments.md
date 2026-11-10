@@ -32,10 +32,12 @@ An application module charges a card token with `CreatePayment` and reads the pa
 
 ## Sub-features
 
-- `pay-approved`: a token becomes one payment request with the amount in minor units, currency, reference, processing channel, token source and the caller's idempotency key; it reads `pending` until Checkout.com has captured it, then `succeeded`, and Checkout.com itself holds it as captured.
-- `pay-declined`: a declined card is a `failed` payment carrying the insufficient-funds code and Checkout.com's response code, also on a later `GetPayment`; an unknown or malformed id is `PaymentNotFoundError`, the malformed one without a call.
-- `pay-idempotent`: two concurrent calls under one key create one payment, each returning it or a retryable `PaymentError` (`duplicate_request`, which the sandbox sometimes answers), and a retry returns it; the same key returns the first payment and Checkout.com answers the second request from its cache; a new key is a new payment.
-- `pay-3ds`: a challenged payment is `requires_action` with the redirect and the return URL as success and failure URL, still reads `requires_action` with the same redirect while the payer is away, and ends `succeeded` or `failed` by the payer's outcome.
+Each journey says where it runs; [README](README.md) explains the two targets.
+
+- `pay-approved` (sandbox, then stand-in): a token becomes a payment that reads `pending` until Checkout.com has captured it, then `succeeded`; the provider holds it captured for 2500 EUR under the reference, as a `Regular` payment. On the stand-in the request also carries the amount in minor units, currency, reference, processing channel, token source and the caller's idempotency key, which the sandbox does not show.
+- `pay-declined` (sandbox, then stand-in): a declined card is a `failed` payment carrying the insufficient-funds code and Checkout.com's response code 20051, also on a later `GetPayment`; an unknown or malformed id is `PaymentNotFoundError`. On the stand-in, the malformed id sends no request.
+- `pay-idempotent` (sandbox, then stand-in): the same key returns the first payment and a new key a new one; two concurrent calls under one key create one payment, each returning it or a retryable `PaymentError` (`duplicate_request`, which the sandbox sometimes answers), and a retry returns it. On the stand-in its log also shows the second request answered from the idempotency cache, and one payment created for the concurrent key.
+- `pay-3ds` (stand-in only): a challenged payment is `requires_action` with the redirect and the return URL as success and failure URL, still reads `requires_action` with the same redirect while the payer is away, and ends `succeeded` or `failed` by the payer's outcome. The sandbox's challenge needs a password typed in an iframe, which no journey can drive, so the payer's outcome is the stand-in's lever.
 
 ## How to get to it (user POV)
 
@@ -49,4 +51,5 @@ pnpm exec antelopejs-verify journey "$RUN" payments
 
 ## Gotchas
 
-- The Checkout.com side is the module's own stand-in (`src/test/standin`, built to `dist/test/standin`), so a feature proves agreement with its reading of the documentation, not with the live service; see [sandbox](sandbox.md).
+- Live, a payment that does not save a card asks for no 3-D Secure, so the sandbox authorizes it at once and captures it seconds later; `settled` reads the sandbox every second, for up to 45 s, until it shows `Captured`.
+- A stand-in pass proves agreement with the stand-in's reading of Checkout.com's documentation (`src/test/standin`, built to `dist/test/standin`); a sandbox pass proves the module against the merchant's sandbox. Step names start with `sandbox:` or `stand-in:`.
