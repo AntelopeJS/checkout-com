@@ -5,5 +5,7 @@ export default antelopeKnipConfig({
     "src/test/**/*.test.ts",
     "src/test/antelope.test.ts",
     "test/renewal-probe/index.js",
+    ".agents/skills/formal-webhook-acceptance/check.ts",
+    ".agents/skills/formal-webhook-acceptance/mutations.ts",
   ],
 });
