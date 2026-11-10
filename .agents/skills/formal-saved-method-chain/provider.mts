@@ -257,6 +257,17 @@ export class Provider {
           (method) => method.id === id && method.createdAt === createdAt,
         ),
       );
+    const unauthenticated = methods.filter(({ id }) =>
+      [...this.payments.values()].some(
+        (payment) => payment.instrument === id && payment.inThreeDs,
+      ),
+    );
+    if (unauthenticated.length > 0) {
+      this.breaks(
+        "ListsOnlyAuthenticated",
+        `${op.label} answered [${this.listed(unauthenticated)}], whose saving payment still waits for its payer`,
+      );
+    }
     if (!isSame) {
       this.breaks(
         "ListMatchesRecord",
@@ -397,6 +408,15 @@ export class Provider {
   ): Reply {
     if (body.merchant_initiated === true) this.checkChain(op, body, instrument);
     if (!this.instruments.has(instrument)) return SOURCE_UNKNOWN;
+    const isUnauthenticated = [...this.payments.values()].some(
+      (payment) => payment.instrument === instrument && payment.inThreeDs,
+    );
+    if (body.merchant_initiated === true && isUnauthenticated) {
+      this.breaks(
+        "ChargesOnlyAuthenticated",
+        `${op.label} charged ${this.alias(instrument)} off-session while its saving payment still waits for its payer`,
+      );
+    }
     this.charges += 1;
     const id = PaddedId("pay", `charge${this.charges}`);
     this.aliases.set(id, `charge${this.charges}`);

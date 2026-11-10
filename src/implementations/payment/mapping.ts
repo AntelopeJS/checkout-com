@@ -15,6 +15,7 @@ import type {
 
 import { ToRefundId } from "./ids";
 import { LookUp } from "./lookup";
+import { IsText } from "./guards";
 import type {
   CkoAction,
   CkoDisputeEventData,
@@ -212,6 +213,16 @@ function failureOf(
 }
 
 /**
+ * A saving payment is sent without its customer, so the card is linked only
+ * once the payer has authenticated; its customer is then the one its
+ * `antelope_save_for` marker names.
+ */
+function customerOf(payment: CkoPayment): string | undefined {
+  const marked = payment.metadata?.[SAVE_FOR_KEY];
+  return payment.customer?.id ?? (IsText(marked) ? marked : undefined);
+}
+
+/**
  * Normalises any of the three payment shapes Checkout.com answers with.
  */
 export function ToPayment(
@@ -230,8 +241,9 @@ export function ToPayment(
     reference: payment.reference ?? "",
     createdAt: ToEpochMillis(payment.requested_on ?? payment.processed_on),
   };
-  if (payment.customer?.id) {
-    normalised.customer = payment.customer.id;
+  const customer = customerOf(payment);
+  if (customer) {
+    normalised.customer = customer;
   }
   if (payment.source?.id) {
     normalised.paymentMethod = payment.source.id;

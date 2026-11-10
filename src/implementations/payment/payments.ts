@@ -84,17 +84,26 @@ function assertConsistent(request: PaymentRequest): void {
   }
 }
 
+/**
+ * The payment that saved the card, for the chain. A customer's off-session
+ * charge must use a card that customer has: a card its payer never
+ * authenticated is linked to no customer, so it is refused here rather than
+ * charged as though the payer had agreed to it.
+ */
 async function initialPaymentOf(
   account: Account,
   request: PaymentRequest,
 ): Promise<string | undefined> {
   if (!request.customer || !request.paymentMethod) return undefined;
-  const saved = await FindSavedMethod(
+  const found = await FindSavedMethod(
     account.client,
     request.customer,
     request.paymentMethod,
   );
-  return saved?.initialPayment;
+  if (!found.isListed) {
+    throw new CustomerNotFoundError(request.paymentMethod, "payment method");
+  }
+  return found.saved?.initialPayment;
 }
 
 /**
@@ -144,7 +153,7 @@ async function buildRequest(
   if (request.description) {
     sent.description = request.description;
   }
-  if (request.customer) {
+  if (request.customer && !request.savePaymentMethod) {
     sent.customer = { id: request.customer };
   }
   if (request.returnUrl) {

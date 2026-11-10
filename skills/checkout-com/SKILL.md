@@ -47,8 +47,10 @@ Checkout.com has no subscription resource.
 - Every payment asking for 3DS, a saving payment always, comes back
   `requires_action`, even for a frictionless card; `GetPayment` keeps
   `requires_action` and `redirectUrl` until the payer is past 3DS.
-- A card saved through 3DS is recorded on the first `GetPayment` or payment
-  webhook after authentication (`antelope_save_for` marker).
+- A card saved through 3DS becomes the customer's, and is recorded, on the
+  first `GetPayment` or payment webhook after authentication
+  (`antelope_save_for` marker); until then `ListPaymentMethods` does not list
+  it, and an abandoned 3DS leaves the customer no card.
 - Refunds come back `pending`; the webhook settles them. Refund ids are
   `<pay_…>:<act_…>` — opaque.
 - Off-session charges are merchant-initiated and chained (`previous_payment_id`)
