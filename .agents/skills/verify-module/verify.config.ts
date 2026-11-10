@@ -55,6 +55,7 @@ const config: VerifyConfig = {
         "src/implementations/payment/follow.ts",
         "src/implementations/payment/payments.ts",
         "src/implementations/payment/customers.ts",
+        "src/implementations/payment/mapping.ts",
       ],
       files: [".agents/skills/formal-saved-method-chain/**"],
       command: ["node", ".agents/skills/formal-saved-method-chain/check.mts"],

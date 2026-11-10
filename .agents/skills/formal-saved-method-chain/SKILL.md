@@ -97,7 +97,7 @@ Last code synchronization is the head of the pull request that adds this skill, 
 | `src/implementations/payment/payments.ts` | `CreatePayment`, `initiation` and `initialPaymentOf` for `previous_payment_id`, `GetPayment` |
 | `src/implementations/payment/customers.ts` | `CreateCustomer`, `ListPaymentMethods`, `DetachPaymentMethod` |
 
-The `formal` entry in `verify.config.ts` covers these four files. `mapping.ts` (`ToPayment`, `WriteMetadata`), `http.ts` and `resources.ts` also shape what the chain does, but the gate does not see them. After a covered change, compare the model with these assumptions and rerun the check.
+The `formal` entry in `verify.config.ts` covers these four files and `mapping.ts` (`ToPayment`, `WriteMetadata`, which decide whether a card is recorded). `http.ts` and `resources.ts` also shape what the chain does, but the gate does not see them. After a covered change, compare the model with these assumptions and rerun the check.
 
 The coverage lines at the pinned seed are the same for both semantics, except the charge counts:
 
