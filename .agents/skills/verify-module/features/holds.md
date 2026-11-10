@@ -30,7 +30,7 @@ An application module authorizes first and settles later: `CapturePayment` or `C
 ## Sub-features
 
 - `hold-capture`: an `authorizeOnly` payment reads `authorized` with nothing captured and was asked of Checkout.com with `capture: false`; a partial capture reaches Checkout.com under the caller's key and the payment ends `succeeded` with that amount; capturing a payment Checkout.com captures by itself is `InvalidPaymentStateError` and sends nothing.
-- `hold-cancel`: cancelling a hold sends one void and the payment reads `canceled` (Checkout.com holds it as voided); cancelling a payment waiting for 3-D Secure is `InvalidPaymentStateError`, from the 403 Checkout.com answers to the void.
+- `hold-cancel`: cancelling a hold sends one void and the payment reads `canceled` (Checkout.com holds it as voided); cancelling a payment waiting for 3-D Secure is `InvalidPaymentStateError`, from the 422 `no_balance_available_to_void` Checkout.com answers to the void (the sandbox's answer; its documentation shows a 403, which the module maps the same way).
 
 ## How to get to it (user POV)
 
