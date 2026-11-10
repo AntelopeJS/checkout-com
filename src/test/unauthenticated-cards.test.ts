@@ -74,6 +74,35 @@ describe("[checkout-com] cards the payer never authenticated", function () {
     );
   });
 
+  it("names the requested customer on a saving payment of another customer's card", async function () {
+    const target = SuiteTarget();
+    if (!target.publicKey) this.skip();
+    const owner = await CreateCustomer({ email: email() }, key());
+    const instrument = await MintInstrument(
+      target,
+      TEST_CARDS.approved,
+      owner.id,
+    );
+    const requester = await CreateCustomer({ email: email() }, key());
+    const saving = await CreatePayment(
+      {
+        amount: CHARGE,
+        reference: reference(),
+        paymentMethod: instrument,
+        customer: requester.id,
+        savePaymentMethod: true,
+        returnUrl: RETURN_URL,
+      },
+      key(),
+    );
+    assert.equal(saving.customer, requester.id);
+    assert.equal((await GetPayment(saving.id)).customer, requester.id);
+  });
+});
+
+describe("[checkout-com] the customer of a saving payment", function () {
+  this.timeout(SUITE_TIMEOUT);
+
   it("refuses a saving payment for a customer that does not exist, before any charge", async function () {
     const absent = `cus_${"a".repeat(26)}`;
     const paymentReference = reference();
@@ -105,28 +134,31 @@ describe("[checkout-com] cards the payer never authenticated", function () {
     );
   });
 
-  it("names the requested customer on a saving payment of another customer's card", async function () {
-    const target = SuiteTarget();
-    if (!target.publicKey) this.skip();
-    const owner = await CreateCustomer({ email: email() }, key());
-    const instrument = await MintInstrument(
-      target,
-      TEST_CARDS.approved,
-      owner.id,
-    );
-    const requester = await CreateCustomer({ email: email() }, key());
-    const saving = await CreatePayment(
-      {
-        amount: CHARGE,
-        reference: reference(),
-        paymentMethod: instrument,
-        customer: requester.id,
-        savePaymentMethod: true,
-        returnUrl: RETURN_URL,
-      },
-      key(),
-    );
-    assert.equal(saving.customer, requester.id);
-    assert.equal((await GetPayment(saving.id)).customer, requester.id);
+  it("refuses a saving payment for a customer id that is not one, before any charge", async function () {
+    const real = await CreateCustomer({ email: email() }, key());
+    for (const disguised of [
+      `cus_${"z".repeat(26)}/../${real.id}`,
+      `${real.id}?x`,
+      `${real.id}#x`,
+      real.email ?? "",
+    ]) {
+      const token = await CardToken(this, TEST_CARDS.approved);
+      await assert.rejects(
+        () =>
+          CreatePayment(
+            {
+              amount: CHARGE,
+              reference: reference(),
+              paymentMethod: token,
+              customer: disguised,
+              savePaymentMethod: true,
+              returnUrl: RETURN_URL,
+            },
+            key(),
+          ),
+        CustomerNotFoundError,
+        disguised,
+      );
+    }
   });
 });

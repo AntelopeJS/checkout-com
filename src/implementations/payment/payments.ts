@@ -10,7 +10,7 @@ import {
   PaymentError,
 } from "@antelopejs/interface-payment";
 
-import { AssertPaymentId } from "./ids";
+import { AssertCustomerId, AssertPaymentId } from "./ids";
 import type { CkoClient, CkoResponse } from "./http";
 import { type Account, GetAccount } from "./accounts";
 import { TranslateError, Translating } from "./errors";
@@ -147,6 +147,7 @@ async function assertSavingCustomer(
   request: PaymentRequest,
 ): Promise<void> {
   if (!request.savePaymentMethod || !request.customer) return;
+  AssertCustomerId(request.customer);
   await account.client.send(
     { method: "GET", path: `/customers/${request.customer}` },
     IsCkoCustomer,
