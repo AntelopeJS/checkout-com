@@ -316,9 +316,9 @@ function applyRefund(
 }
 
 /**
- * `POST /payments/{id}/refunds`. Checkout.com documents no refund-specific
- * code for an amount above the refundable balance; `amount_exceeds_balance`
- * is the documented balance code this stand-in answers with.
+ * `POST /payments/{id}/refunds`. An amount above the refundable balance is
+ * refused with 422 `refund_amount_exceeds_balance`, the code the sandbox
+ * answers (observed 2026-11-10); Checkout.com's documentation names none.
  */
 export function Refund(
   context: SimContext,
@@ -332,7 +332,7 @@ export function Refund(
   const amount =
     CountOf(request.body.amount) ?? payment.balances.available_to_refund;
   if (amount > payment.balances.available_to_refund) {
-    throw new SimError(Problem("amount_exceeds_balance"));
+    throw new SimError(Problem("refund_amount_exceeds_balance"));
   }
   if (amount === REFUND_DECLINED_AMOUNT) {
     throw new SimError({
