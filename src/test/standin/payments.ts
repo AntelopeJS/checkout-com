@@ -265,7 +265,11 @@ function accepted(
   };
 }
 
-/** `POST /payments/{id}/captures`: 403 unless authorized, then async. */
+/**
+ * `POST /payments/{id}/captures`: refused unless authorized, then async. The
+ * sandbox refuses with 422 `no_balance_available_to_capture`, not the 403 the
+ * documentation shows (observed 2026-11-10).
+ */
 export function Capture(
   context: SimContext,
   request: StandInRequest,
@@ -273,7 +277,7 @@ export function Capture(
 ): StandInReply {
   const payment = found(context, id);
   if (payment.status !== "Authorized")
-    throw new SimError({ status: FORBIDDEN });
+    throw new SimError(Problem("no_balance_available_to_capture"));
   const amount =
     CountOf(request.body.amount) ?? payment.balances.available_to_capture;
   if (amount > payment.balances.available_to_capture) {
@@ -284,11 +288,15 @@ export function Capture(
   return accepted(context, payment, actionId, voidAcceptedFixture);
 }
 
-/** `POST /payments/{id}/voids`: 403 unless authorized, then async. */
+/**
+ * `POST /payments/{id}/voids`: refused unless authorized, then async. The
+ * sandbox refuses a payment waiting for 3DS, captured or declined with 422
+ * `no_balance_available_to_void` (observed 2026-11-10).
+ */
 export function Void(context: SimContext, id: string): StandInReply {
   const payment = found(context, id);
   if (payment.status !== "Authorized")
-    throw new SimError({ status: FORBIDDEN });
+    throw new SimError(Problem("no_balance_available_to_void"));
   const voided = action("Void", payment.balances.available_to_void);
   context.later(() => {
     payment.balances.total_voided += payment.balances.available_to_void;

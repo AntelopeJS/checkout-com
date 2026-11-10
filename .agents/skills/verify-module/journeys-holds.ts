@@ -56,7 +56,7 @@ const holdCancel: Journey = {
       const refused = await call(session, "CancelPayment of a payment waiting for 3-D Secure", "CancelPayment", [text(pick(waiting.value, "id")), fresh("key"), null]);
       context.expect(refused.folder, [
         same("cancelling a payment with no authorization yet is a state error", pick(thrown(refused), 0), "InvalidPaymentStateError"),
-        same("Checkout.com refused the void it was asked for with a 403", callsTo(session.standIn, "POST", `/payments/${text(pick(waiting.value, "id"))}/voids`).map((entry) => entry.status), [403]),
+        same("Checkout.com refused the void it was asked for, as the sandbox does, with 422", callsTo(session.standIn, "POST", `/payments/${text(pick(waiting.value, "id"))}/voids`).map((entry) => entry.status), [422]),
       ]);
       context.expect(refused.folder, [same("the amount of the hold was the request's", pick(held.value, "amount"), EUR)]);
     });
