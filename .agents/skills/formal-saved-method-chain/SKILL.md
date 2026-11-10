@@ -90,6 +90,7 @@ Not modeled:
 - Transport errors, timeouts and 5xx answers.
 - A refusal of a write over 20 pairs. The stand-in answers 422, but the sandbox's answer is unobserved.
 - Caller keys that look like the module's own. PR #40 drops them, and this check generates plain keys only.
+- A card that exists before it is linked, such as one minted with `POST /instruments` and then saved as a `src_`. Every save here starts from a token, which Checkout.com links at `POST /payments`, so a detach never reads an unlinked card. The race between such a card's save and its detach is covered by the stand-in test "leaves no record when an unlinked card is saved while its detach is in flight", not by this check, which passes on code without that fix too.
 
 ## Coverage record
 
