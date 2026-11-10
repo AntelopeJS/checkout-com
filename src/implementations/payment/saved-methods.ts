@@ -125,7 +125,9 @@ const recordsInFlight = new Map<string, Promise<unknown>>();
 /**
  * Checkout.com replaces a customer's whole metadata on every PATCH and offers
  * no conditional write, so two records built from the same read keep only the
- * last. Writes for one customer therefore wait for each other in this process.
+ * last. Writes for one customer therefore wait for each other in this process,
+ * keyed by its `cus_` id; a card's save and detach also wait for each other,
+ * keyed by its `src_` id, always taken before the customer's.
  * Two processes saving cards for one customer at the same moment can still
  * lose one card's record, which leaves that card's charges to Checkout.com's
  * own lookup of the initial payment.
@@ -161,8 +163,10 @@ export async function RememberSave(
   if (!isString(customer) || !payment.paymentMethod) return;
   if (payment.status === "failed" || payment.status === "canceled") return;
   const instrument = payment.paymentMethod;
-  await oneAtATime(customer, () =>
-    RecordSavedMethod(client, customer, instrument, payment.id),
+  await oneAtATime(instrument, () =>
+    oneAtATime(customer, () =>
+      RecordSavedMethod(client, customer, instrument, payment.id),
+    ),
   ).catch((cause: unknown) => {
     process.stderr.write(
       `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the next read of the payment retries\n`,
@@ -185,15 +189,7 @@ async function pruneRecords(client: CkoClient, customerId: string) {
   });
 }
 
-/**
- * Deletes a saved instrument and, when it belongs to a customer, the record of
- * the payment that saved it. Both run in the customer's chain of record
- * writes, so a record being written for the same card in this process lands
- * before the card is deleted and is pruned with it. The instrument is gone
- * once this resolves; a failed prune is reported, and the customer's next
- * save prunes it.
- */
-export async function DeleteSavedMethod(
+async function deleteAndPrune(
   client: CkoClient,
   instrument: string,
 ): Promise<void> {
@@ -216,4 +212,20 @@ export async function DeleteSavedMethod(
       );
     });
   });
+}
+
+/**
+ * Deletes a saved instrument and, when it belongs to a customer, the record of
+ * the payment that saved it. A save and a detach of one card wait for each
+ * other, each taking the card's chain before the customer's: a save that ran
+ * first has linked the card, so the detach finds its customer and prunes the
+ * record, and a save that runs after finds the card gone and records nothing.
+ * The instrument is gone once this resolves; a failed prune is reported, and
+ * the customer's next save prunes it.
+ */
+export function DeleteSavedMethod(
+  client: CkoClient,
+  instrument: string,
+): Promise<void> {
+  return oneAtATime(instrument, () => deleteAndPrune(client, instrument));
 }
