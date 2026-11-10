@@ -120,6 +120,32 @@ export async function FindSavedMethod(
   return ReadSavedMethod(customer.metadata, instrument);
 }
 
+const recordsInFlight = new Map<string, Promise<unknown>>();
+
+/**
+ * Checkout.com replaces a customer's whole metadata on every PATCH and offers
+ * no conditional write, so two records built from the same read keep only the
+ * last. Writes for one customer therefore wait for each other in this process.
+ * Two processes saving cards for one customer at the same moment can still
+ * lose one card's record, which leaves that card's charges to Checkout.com's
+ * own lookup of the initial payment.
+ */
+function oneAtATime<T>(customer: string, write: () => Promise<T>): Promise<T> {
+  const previous = recordsInFlight.get(customer) ?? Promise.resolve();
+  const current = previous.then(write, write);
+  const settled = current.then(
+    () => undefined,
+    () => undefined,
+  );
+  recordsInFlight.set(customer, settled);
+  void settled.then(() => {
+    if (recordsInFlight.get(customer) === settled) {
+      recordsInFlight.delete(customer);
+    }
+  });
+  return current;
+}
+
 /**
  * Records the card a payment saved for `customer` once the payment carries
  * it: on the answer to `CreatePayment`, or, for a payment that sent the payer
@@ -134,11 +160,9 @@ export async function RememberSave(
 ): Promise<void> {
   if (!isString(customer) || !payment.paymentMethod) return;
   if (payment.status === "failed" || payment.status === "canceled") return;
-  await RecordSavedMethod(
-    client,
-    customer,
-    payment.paymentMethod,
-    payment.id,
+  const instrument = payment.paymentMethod;
+  await oneAtATime(customer, () =>
+    RecordSavedMethod(client, customer, instrument, payment.id),
   ).catch((cause: unknown) => {
     process.stderr.write(
       `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the next read of the payment retries\n`,
