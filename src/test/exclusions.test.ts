@@ -25,7 +25,25 @@ const EXCLUDED = new Map([
   ],
 ]);
 
+/**
+ * Tests that need a refund to succeed at Checkout.com. They skip, with the
+ * reason on stderr, only when the live run's setup found the sandbox unable to
+ * refund (`CKO_TEST_REFUNDS_BLOCKED`); a run on an account with balance runs
+ * them.
+ */
+const NEEDS_REFUND_BALANCE = new Set([
+  "[checkout-com] refunds reports a refund pending until Checkout.com processes it",
+  "[checkout-com] refunds reports an issuer's refusal of the refund as a failed call",
+  "refunds (requires ANTELOPE_PAYMENT_TEST_METHOD) refunds part of a captured payment",
+  "refunds (requires ANTELOPE_PAYMENT_TEST_METHOD) refuses to refund more than was captured",
+]);
+
 beforeEach(function () {
-  const reason = EXCLUDED.get(this.currentTest?.fullTitle() ?? "");
-  if (reason) this.skip();
+  const title = this.currentTest?.fullTitle() ?? "";
+  if (EXCLUDED.has(title)) this.skip();
+  const blocked = process.env.CKO_TEST_REFUNDS_BLOCKED;
+  if (blocked && NEEDS_REFUND_BALANCE.has(title)) {
+    process.stderr.write(`${blocked}: ${title}\n`);
+    this.skip();
+  }
 });
