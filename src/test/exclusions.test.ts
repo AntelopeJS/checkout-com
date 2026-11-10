@@ -35,7 +35,6 @@ const NEEDS_REFUND_BALANCE = new Set([
   "[checkout-com] refunds reports a refund pending until Checkout.com processes it",
   "[checkout-com] refunds reports an issuer's refusal of the refund as a failed call",
   "refunds (requires ANTELOPE_PAYMENT_TEST_METHOD) refunds part of a captured payment",
-  "refunds (requires ANTELOPE_PAYMENT_TEST_METHOD) refuses to refund more than was captured",
 ]);
 
 beforeEach(function () {
