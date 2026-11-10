@@ -58,8 +58,10 @@ Checkout.com has no subscription resource.
 ## Webhooks
 
 Create a workflow whose webhook action has a signature key (and optionally an
-`Authorization` header); subscribe the `payment_*` events and
-`dispute_received`. Call `VerifyWebhook({ body: rawBody, headers })` from your
+`Authorization` header); subscribe the `payment_*` events, including
+`payment_capture_declined`, `payment_void_declined` and
+`payment_authentication_failed`, and `dispute_received`. A declined capture or
+void reports the hold it leaves (`payment.authorized`). Call `VerifyWebhook({ body: rawBody, headers })` from your
 route. Payment events read the payment back from the API, so `VerifyWebhook` can
 reject with a plain `PaymentError` during an outage — answer 5xx and
 Checkout.com retries. No timestamp is signed: de-duplicate on `event.id`.
