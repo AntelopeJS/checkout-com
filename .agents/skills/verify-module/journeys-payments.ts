@@ -63,8 +63,8 @@ const payDeclined: Journey = {
 };
 
 const payIdempotent: Journey = {
-  title: "replaying a payment with the same idempotency key returns the same payment and charges once; a new key is a new payment",
-  entryPoint: "`CreatePayment` twice with one idempotency key, then once with another",
+  title: "replaying a payment with the same idempotency key returns the same payment and charges once, a duplicate sent while the first is in flight is either that payment or a retryable refusal, and a new key is a new payment",
+  entryPoint: "`CreatePayment` twice with one idempotency key, then twice at once with another and once more to retry it, then once with a third",
   async run(context) {
     await withSession(context, async (session) => {
       const key = fresh("key");
@@ -77,6 +77,23 @@ const payIdempotent: Journey = {
         answered(replay),
         same("the replay returns the first payment", pick(replay.value, "id"), pick(first.value, "id")),
         same("Checkout.com answered the second request from its idempotency cache", callsTo(session.standIn, "POST", "/payments").map((entry) => entry.replayed), [false, true]),
+      ]);
+      const concurrentKey = fresh("key");
+      const concurrentRequest = { ...request, reference: fresh("order"), paymentMethod: await mintToken(session, CARDS.approved) };
+      const before = callsTo(session.standIn, "POST", "/payments").length;
+      const [left, right] = await Promise.all([
+        call(session, "CreatePayment under a fresh key", "CreatePayment", [concurrentRequest, concurrentKey, null]),
+        call(session, "CreatePayment under the same key at the same time", "CreatePayment", [concurrentRequest, concurrentKey, null]),
+      ]);
+      const retried = await call(session, "CreatePayment retried under that key", "CreatePayment", [concurrentRequest, concurrentKey, null]);
+      const paid = [left, right].filter((result) => pick(result.value, "id") !== undefined);
+      const refused = [left, right].filter((result) => pick(result.value, "id") === undefined);
+      context.expect(retried.folder, [
+        answered(left),
+        answered(right),
+        same("every concurrent call that returned a payment returned the one the retry returns", paid.map((result) => text(pick(result.value, "id"))), paid.map(() => text(pick(retried.value, "id")))),
+        same("a refused duplicate is a retryable PaymentError naming duplicate_request", refused.map((result) => [text(pick(thrown(result), 0)), text(pick(thrown(result), 1)).includes("duplicate_request")]), refused.map(() => ["PaymentError", true])),
+        same("Checkout.com created one payment for the key", callsTo(session.standIn, "POST", "/payments").slice(before).filter((entry) => !entry.replayed && entry.status < 300).length, 1),
       ]);
       const other = await call(session, "CreatePayment under a new key", "CreatePayment", [{ ...request, paymentMethod: await mintToken(session, CARDS.approved) }, fresh("key"), null]);
       context.expect(other.folder, [answered(other), same("a new key makes a new payment", pick(other.value, "id") === pick(first.value, "id"), false)]);
