@@ -1,4 +1,4 @@
-import { IsCkoActionAccepted, IsCkoPayment } from "./resources";
+import { IsCkoActionAccepted, IsCkoCustomer, IsCkoPayment } from "./resources";
 import type {
   Amount,
   Payment,
@@ -137,6 +137,22 @@ async function initiation(
   return {};
 }
 
+/**
+ * A saving payment is sent without its customer, so Checkout.com no longer
+ * refuses an unknown one; the customer is read first so the payer is never
+ * charged for a save that cannot be recorded.
+ */
+async function assertSavingCustomer(
+  account: Account,
+  request: PaymentRequest,
+): Promise<void> {
+  if (!request.savePaymentMethod || !request.customer) return;
+  await account.client.send(
+    { method: "GET", path: `/customers/${request.customer}` },
+    IsCkoCustomer,
+  );
+}
+
 async function buildRequest(
   account: Account,
   request: PaymentRequest,
@@ -171,6 +187,7 @@ export async function CreatePayment(
   assertConsistent(request);
   const account = GetAccount(provider);
   try {
+    await assertSavingCustomer(account, request);
     const sent = await buildRequest(account, request);
     const { body } = await account.client.send(
       {

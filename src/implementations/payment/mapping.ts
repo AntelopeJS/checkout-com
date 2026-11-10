@@ -214,12 +214,13 @@ function failureOf(
 
 /**
  * A saving payment is sent without its customer, so the card is linked only
- * once the payer has authenticated; its customer is then the one its
- * `antelope_save_for` marker names.
+ * once the payer has authenticated; its customer is the one its
+ * `antelope_save_for` marker names, even when Checkout.com reports the owner
+ * of a card it was given.
  */
 function customerOf(payment: CkoPayment): string | undefined {
   const marked = payment.metadata?.[SAVE_FOR_KEY];
-  return payment.customer?.id ?? (IsText(marked) ? marked : undefined);
+  return IsText(marked) ? marked : payment.customer?.id;
 }
 
 /**

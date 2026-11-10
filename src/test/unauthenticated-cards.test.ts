@@ -8,6 +8,7 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { MintInstrument } from "./mint";
+import { CurrentStandIn } from "./standin";
 import { TEST_CARDS } from "./constants";
 import {
   CardToken,
@@ -71,5 +72,61 @@ describe("[checkout-com] cards the payer never authenticated", function () {
         ),
       CustomerNotFoundError,
     );
+  });
+
+  it("refuses a saving payment for a customer that does not exist, before any charge", async function () {
+    const absent = `cus_${"a".repeat(26)}`;
+    const paymentReference = reference();
+    const token = await CardToken(this, TEST_CARDS.approved);
+    await assert.rejects(
+      () =>
+        CreatePayment(
+          {
+            amount: CHARGE,
+            reference: paymentReference,
+            paymentMethod: token,
+            customer: absent,
+            savePaymentMethod: true,
+            returnUrl: RETURN_URL,
+          },
+          key(),
+        ),
+      CustomerNotFoundError,
+    );
+    const standIn = CurrentStandIn();
+    if (!standIn) return;
+    assert.equal(
+      standIn.calls.filter(
+        (call) =>
+          call.path === "/payments" && call.body.reference === paymentReference,
+      ).length,
+      0,
+      "no payment was sent",
+    );
+  });
+
+  it("names the requested customer on a saving payment of another customer's card", async function () {
+    const target = SuiteTarget();
+    if (!target.publicKey) this.skip();
+    const owner = await CreateCustomer({ email: email() }, key());
+    const instrument = await MintInstrument(
+      target,
+      TEST_CARDS.approved,
+      owner.id,
+    );
+    const requester = await CreateCustomer({ email: email() }, key());
+    const saving = await CreatePayment(
+      {
+        amount: CHARGE,
+        reference: reference(),
+        paymentMethod: instrument,
+        customer: requester.id,
+        savePaymentMethod: true,
+        returnUrl: RETURN_URL,
+      },
+      key(),
+    );
+    assert.equal(saving.customer, requester.id);
+    assert.equal((await GetPayment(saving.id)).customer, requester.id);
   });
 });
