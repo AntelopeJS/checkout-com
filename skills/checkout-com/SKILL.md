@@ -51,8 +51,9 @@ Checkout.com has no subscription resource.
 - Off-session charges are merchant-initiated and chained (`previous_payment_id`)
   to the payment that saved the card, recorded in the customer's metadata
   (`antelope_method_…`). Customers have 20 metadata pairs in all.
-- Three-decimal currencies must end in 0, CLP in 00, or Checkout.com refuses the
-  amount.
+- Amounts go out unchanged. Checkout.com's docs ask three-decimal currencies to
+  end in 0 and CLP in 00, but the sandbox accepts any whole amount; a refusal
+  surfaces as `PaymentError` (`amount_invalid`).
 
 ## Webhooks
 

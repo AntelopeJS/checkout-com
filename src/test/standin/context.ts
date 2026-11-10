@@ -5,16 +5,6 @@ import { type JsonValue, isCount, isText } from "./wire";
 
 const UNPROCESSABLE = 422;
 const ACTION_DELAY_MS = 60;
-const THREE_DECIMAL = new Set([
-  "BHD",
-  "IQD",
-  "JOD",
-  "KWD",
-  "LYD",
-  "OMR",
-  "TND",
-]);
-const WHOLE_HUNDREDS = new Set(["CLP"]);
 
 interface SimEvent {
   type: string;
@@ -66,8 +56,10 @@ export interface Amount {
 }
 
 /**
- * The amount rules of "Format the amount value": three-decimal currencies must
- * end in 0, CLP in 00.
+ * A currency code and a non-negative whole number of minor units. "Format the
+ * amount value" also asks three-decimal currencies to end in 0 and CLP in 00,
+ * but the sandbox authorizes and captures KWD 1001, BHD 1005 and CLP 150
+ * (observed 2026-11-10), so the stand-in does not refuse them either.
  */
 export function ParseAmount(
   currency: JsonValue | undefined,
@@ -77,13 +69,6 @@ export function ParseAmount(
     throw new SimError(Problem("currency_required"));
   }
   if (!isCount(amount) || !Number.isInteger(amount) || amount < 0) {
-    throw new SimError(Problem("amount_invalid"));
-  }
-  const code = currency.toUpperCase();
-  if (THREE_DECIMAL.has(code) && amount % 10 !== 0) {
-    throw new SimError(Problem("amount_invalid"));
-  }
-  if (WHOLE_HUNDREDS.has(code) && amount % 100 !== 0) {
     throw new SimError(Problem("amount_invalid"));
   }
   return { currency, value: amount };
