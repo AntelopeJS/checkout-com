@@ -32,6 +32,8 @@ export interface SimContext {
   baseUrl: string;
   events: SimEvent[];
   challenges: Map<string, PendingChallenge>;
+  /** Refund requests the issuer will refuse outright, next first. */
+  issuerRefusals: number;
   /** Applies an accepted action later, as Checkout.com does. */
   later(apply: () => void): void;
   /** Resolves once every action accepted so far has been applied. */
@@ -94,6 +96,7 @@ export function NewContext(state: SimState, baseUrl: string): SimContext {
     baseUrl,
     events: [],
     challenges: new Map(),
+    issuerRefusals: 0,
     later(apply) {
       const applied = new Promise<void>((resolve) =>
         setTimeout(() => {

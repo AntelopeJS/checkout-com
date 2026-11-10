@@ -60,6 +60,16 @@ export class StandIn {
     CompleteChallenge(this.sim(), paymentId, isAuthenticated);
   }
 
+  /**
+   * The issuer refusing the next refund outright, answered with Checkout.com's
+   * documented 422 `refund_authorization_declined`. The sandbox has no amount
+   * or card that triggers it: it approved a refund of 3738 (observed
+   * 2026-11-10).
+   */
+  refuseNextRefund(): void {
+    this.sim().issuerRefusals += 1;
+  }
+
   payHostedPage(sessionId: string, cardNumber: string): string {
     return PayHostedPage(this.sim(), sessionId, cardNumber);
   }

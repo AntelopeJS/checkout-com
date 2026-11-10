@@ -29,7 +29,7 @@ An application module refunds all or part of a captured payment with `RefundPaym
 ## Sub-features
 
 - `refund-flow`: a partial refund is accepted as `pending` with an id made of the payment id and the action id, reaches Checkout.com under the caller's key, settles to `succeeded`, shows in the payment's refunded amount and leaves Checkout.com holding it as partially refunded; a refund above what is left is `InvalidPaymentStateError` and an unknown action `PaymentNotFoundError`.
-- `refund-declined`: an issuer refusing the refund is a `PaymentError` carrying `refund_authorization_declined`, and nothing is refunded.
+- `refund-declined`: an issuer refusing the refund (the stand-in refuses the next refund on request; the sandbox has no trigger for it) is a `PaymentError` carrying `refund_authorization_declined`, and nothing is refunded.
 
 ## How to get to it (user POV)
 

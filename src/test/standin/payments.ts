@@ -32,7 +32,6 @@ const CREATED = 201;
 const OK = 200;
 const FORBIDDEN = 403;
 const NOT_FOUND = 404;
-const REFUND_DECLINED_AMOUNT = 3738;
 const REGULAR = "Regular";
 const FAILED_AUTHENTICATION: CardBehaviour = {
   responseCode: "20151",
@@ -342,7 +341,8 @@ export function Refund(
   if (amount > payment.balances.available_to_refund) {
     throw new SimError(Problem("refund_amount_exceeds_balance"));
   }
-  if (amount === REFUND_DECLINED_AMOUNT) {
+  if (context.issuerRefusals > 0) {
+    context.issuerRefusals -= 1;
     throw new SimError({
       status: 422,
       body: structuredClone(refundDeclinedFixture),

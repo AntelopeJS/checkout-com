@@ -44,6 +44,7 @@ export interface StandIn {
   stop(): Promise<void>;
   settled(): Promise<void>;
   completeChallenge(paymentId: string, isAuthenticated: boolean): void;
+  refuseNextRefund(): void;
   payHostedPage(sessionId: string, cardNumber: string): string;
   readonly calls: readonly object[];
 }
@@ -55,6 +56,7 @@ function isStandIn(value: unknown): value is StandIn {
     typeof value.stop === "function" &&
     typeof value.settled === "function" &&
     typeof value.completeChallenge === "function" &&
+    typeof value.refuseNextRefund === "function" &&
     typeof value.payHostedPage === "function" &&
     Array.isArray(value.calls)
   );
