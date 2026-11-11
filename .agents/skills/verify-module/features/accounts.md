@@ -22,8 +22,10 @@ An operator configures several Checkout.com accounts, and a call picks one with 
 
 ## Sub-features
 
-- `account-selection`: a call naming `secondary` runs on that account, whose off-session charges are declared Unscheduled; an account that is not configured is a `PaymentError` and sends nothing.
-- `bad-key`: a secret key Checkout.com refuses with 401 is a `PaymentError`, so the caller retries instead of seeing a payment.
+Each journey says where it runs; [README](README.md) explains the two targets.
+
+- `account-selection` (sandbox, then stand-in): a call naming `secondary` runs on that account: the provider holds its saving payment with the secondary account's `Unscheduled` payment type, which only that account declares. An account that is not configured is a `PaymentError`; on the stand-in the log also shows no request for it.
+- `bad-key` (sandbox, then stand-in): a secret key Checkout.com refuses is a `PaymentError`, so the caller retries instead of seeing a payment. On the stand-in the log shows the 401.
 
 ## How to get to it (user POV)
 
@@ -37,4 +39,4 @@ pnpm exec antelopejs-verify journey "$RUN" accounts
 
 ## Gotchas
 
-- The Checkout.com side is the module's own stand-in (`src/test/standin`, built to `dist/test/standin`), so a feature proves agreement with its reading of the documentation, not with the live service; see [sandbox](sandbox.md).
+- A stand-in pass proves agreement with the stand-in's reading of Checkout.com's documentation (`src/test/standin`, built to `dist/test/standin`); a sandbox pass proves the module against the merchant's sandbox. Step names start with `sandbox:` or `stand-in:`.

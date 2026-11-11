@@ -7,6 +7,7 @@ import { holdJourneys } from "./journeys-holds.ts";
 import { paymentJourneys } from "./journeys-payments.ts";
 import { refundJourneys } from "./journeys-refunds.ts";
 import { sandboxJourneys } from "./journeys-sandbox.ts";
+import { SANDBOX_KEYS } from "./targets.ts";
 import { webhookJourneys } from "./journeys-webhooks.ts";
 
 const config: VerifyConfig = {
@@ -64,6 +65,7 @@ const config: VerifyConfig = {
       behaviour: { kind: "emit" },
     },
   ],
+  saas: { env: SANDBOX_KEYS, sandbox: "Checkout.com sandbox (merchant-specific base URL)" },
   moduleConfig() {
     return {
       secretKey: "sk_sbox_verify0000000000000000000",
