@@ -17,6 +17,7 @@ import type { JsonObject } from "./standin/wire";
 import {
   CardToken,
   PassAuthentication,
+  RequireStandIn,
   SUITE_TIMEOUT,
   Settled,
   SuiteTarget,
@@ -115,6 +116,37 @@ describe("[checkout-com] saved payment methods", function () {
     assert.deepEqual((await GetCustomer(customer.id)).metadata, {
       tier: "gold",
     });
+  });
+
+  it("keeps the record of every card a customer saves at the same time", async function () {
+    const standIn = RequireStandIn(this);
+    const customer = await CreateCustomer({ email: email() }, key());
+    const saving = await Promise.all(
+      [TEST_CARDS.approved, TEST_CARDS.challenge].map(async (card) =>
+        CreatePayment(
+          {
+            amount: CHARGE,
+            reference: reference(),
+            paymentMethod: await CardToken(this, card),
+            customer: customer.id,
+            savePaymentMethod: true,
+            returnUrl: RETURN_URL,
+          },
+          key(),
+        ),
+      ),
+    );
+    for (const payment of saving) standIn.completeChallenge(payment.id, true);
+    await Promise.all(saving.map(({ id }) => GetPayment(id)));
+
+    const methods = await ListPaymentMethods(customer.id);
+    assert.equal(methods.length, saving.length);
+    for (const method of methods) {
+      assert.ok(
+        method.createdAt > EPOCH_MILLIS_FLOOR,
+        `${method.id} kept its record`,
+      );
+    }
   });
 });
 
