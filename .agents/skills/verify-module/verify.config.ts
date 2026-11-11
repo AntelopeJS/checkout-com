@@ -38,6 +38,17 @@ const config: VerifyConfig = {
       why: "the package name and release workflow claim @antelopejs/checkout-com on npm",
     },
   },
+  formal: [
+    {
+      name: "formal-webhook-acceptance",
+      covers: ["src/implementations/payment/signature.ts"],
+      files: [".agents/skills/formal-webhook-acceptance/**"],
+      command: ["node", ".agents/skills/formal-webhook-acceptance/check.ts"],
+      violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states\))?/gm,
+      passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
+      behaviour: { kind: "emit" },
+    },
+  ],
   moduleConfig() {
     return {
       secretKey: "sk_sbox_verify0000000000000000000",
