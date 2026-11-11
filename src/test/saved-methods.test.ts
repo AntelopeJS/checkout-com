@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { setTimeout as delay } from "node:timers/promises";
 import {
   CreateCustomer,
   CreatePayment,
@@ -11,12 +12,14 @@ import {
 } from "@antelopejs/interface-payment";
 
 import { MintInstrument } from "./mint";
+import { isCustomer } from "./raw";
 import { TEST_CARDS } from "./constants";
 import { CurrentStandIn } from "./standin";
 import type { JsonObject } from "./standin/wire";
 import {
   CardToken,
   PassAuthentication,
+  ReadRaw,
   RequireStandIn,
   SUITE_TIMEOUT,
   Settled,
@@ -31,6 +34,7 @@ const RETURN_URL = "https://merchant.invalid/return";
 const CHARGE = { value: 2500, currency: "EUR" };
 const RENEWAL = { value: 1000, currency: "EUR" };
 const METADATA_LIMIT = 20;
+const SAVE_HEAD_START_MS = 1500;
 
 function chargedPaymentRequests(): JsonObject[] {
   return (CurrentStandIn()?.calls ?? [])
@@ -242,6 +246,94 @@ describe("[checkout-com] metadata the module owns", function () {
       await ListPaymentMethods(other.id),
       [],
       "a payment that did not ask to save links and records nothing",
+    );
+  });
+
+  it("drops a detached card's record from its customer", async function () {
+    const token = await CardToken(this, TEST_CARDS.approved);
+    const customer = await CreateCustomer({ email: email() }, key());
+    const saved = await PassAuthentication(
+      this,
+      await CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: token,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ),
+    );
+    const [method] = await ListPaymentMethods(customer.id);
+    assert.ok(method.createdAt > EPOCH_MILLIS_FLOOR, "the card was recorded");
+    await DetachPaymentMethod(method.id, key());
+    const stored = await ReadRaw(`/customers/${customer.id}`, isCustomer);
+    assert.deepEqual(
+      Object.keys(stored.metadata ?? {}).filter((field) =>
+        field.startsWith("antelope_method_"),
+      ),
+      [],
+      `no record of ${saved.paymentMethod} is left`,
+    );
+  });
+
+  it("leaves no record when an unlinked card is saved while its detach is in flight", async function () {
+    RequireStandIn(this);
+    const target = SuiteTarget();
+    if (!target.publicKey) this.skip();
+    const instrument = await MintInstrument(target, TEST_CARDS.approved);
+    const customer = await CreateCustomer({ email: email() }, key());
+    const { fetch: realFetch } = globalThis;
+    let sawDetachRead: () => void = () => undefined;
+    const detachRead = new Promise<void>((resolve) => {
+      sawDetachRead = resolve;
+    });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    globalThis.fetch = async (input, init) => {
+      const answer = await realFetch(input, init);
+      const url = input instanceof Request ? input.url : input.toString();
+      const isDetachRead =
+        (init?.method ?? "GET") === "GET" &&
+        url.endsWith(`/instruments/${instrument}`);
+      if (isDetachRead) {
+        sawDetachRead();
+        await held;
+      }
+      return answer;
+    };
+    try {
+      const detach = DetachPaymentMethod(instrument, key());
+      await detachRead;
+      const save = CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: instrument,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ).then((payment) => PassAuthentication(this, payment));
+      await Promise.race([save, delay(SAVE_HEAD_START_MS)]);
+      release();
+      await detach;
+      await save;
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    const stored = await ReadRaw(`/customers/${customer.id}`, isCustomer);
+    assert.deepEqual(
+      Object.keys(stored.metadata ?? {}).filter((field) =>
+        field.startsWith("antelope_method_"),
+      ),
+      [],
+      "no record names the deleted card",
     );
   });
 });

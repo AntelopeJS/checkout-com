@@ -37,10 +37,11 @@ Exit 0 means the replace result matches the record in `check.mts`. Exit 1 means 
 
 ## The model
 
-`provider.mts` holds one customer and answers `POST /customers`, `GET` and `PATCH /customers/{id}`, `PATCH` and `DELETE /instruments/{id}`, `POST /payments` and `GET /payments/{id}`. It follows what the sandbox showed on 2026-11-10:
+`provider.mts` holds one customer and answers `POST /customers`, `GET` and `PATCH /customers/{id}`, `GET`, `PATCH` and `DELETE /instruments/{id}`, `POST /payments` and `GET /payments/{id}`. It follows what the sandbox showed on 2026-11-10:
 
 - `PATCH /customers/{id}` with `metadata` replaces the whole map. Without `metadata` it keeps the map. There is no ETag, and `If-Match` is ignored.
 - `GET /customers/{id}` always lists `instruments` and reflects a deleted instrument at once.
+- `GET /instruments/{id}` names the instrument's customer when it has one, and answers 404 once the instrument is deleted.
 - A saving payment links its instrument to the customer as soon as Checkout.com takes it, before 3DS.
 - A saving payment that needs 3DS answers `202` with a redirect and no `source`. Reads of it show `source: {"type": "card"}` with no id until the payer passes 3DS.
 
@@ -61,12 +62,12 @@ The `merge` semantics is not observed. It models a provider that merges a PATCH 
 
 | Rule | Plain sentence | Checked | Replace | Merge |
 | --- | --- | --- | --- | --- |
-| `MetadataLimit` | No customer holds more than 20 pairs, and the module sends no customer write over 20. | every step | holds | breaks (9), not gated |
+| `MetadataLimit` | No customer holds more than 20 pairs, and the module sends no customer write over 20. | every step | holds | breaks (18), not gated |
 | `CallerKeysKept` | Every caller key given to `CreateCustomer` keeps its value. | every step | holds | holds |
 | `ChainMatchesRecord` | An off-session charge sends `previous_payment_id` exactly when the customer read it made held a record for the card, and then sends the recorded payment. | each charge | holds | holds |
 | `RecordKept` | Once a card's record is stored, it names the same payment for as long as the customer has the card. | every step | holds | holds |
 | `ListMatchesRecord` | `ListPaymentMethods` answers the cards its read saw, each with the record's save time or 0. | each list | holds | holds |
-| `NoRecordOutlivesInstrument` | No record names a card the customer no longer has. | quiescence | finding (6) | breaks (6), not gated |
+| `NoRecordOutlivesInstrument` | No record names a card the customer no longer has. | quiescence | holds | breaks (9), not gated |
 | `Settles` | Every operation settles once no request is left to answer. | quiescence | holds | holds |
 
 `RecordKept` is the only rule that sees the lost update `oneAtATime` prevents. `ListMatchesRecord` is the only rule over `ListPaymentMethods`. `Settles` turns a wedged write queue into a finding instead of a hung check.
@@ -89,17 +90,18 @@ Not modeled:
 - Transport errors, timeouts and 5xx answers.
 - A refusal of a write over 20 pairs. The stand-in answers 422, but the sandbox's answer is unobserved.
 - Caller keys that look like the module's own. PR #40 drops them, and this check generates plain keys only.
+- A card that exists before it is linked, such as one minted with `POST /instruments` and then saved as a `src_`. Every save here starts from a token, which Checkout.com links at `POST /payments`, so a detach never reads an unlinked card. The race between such a card's save and its detach is covered by the stand-in test "leaves no record when an unlinked card is saved while its detach is in flight", not by this check, which passes on code without that fix too.
 
 ## Coverage record
 
-Last code synchronization is the head of the pull request that adds this skill, on top of `fix/serialize-saved-method-records` at `be67bf6`.
+Last code synchronization is the head of the pull request that makes `DetachPaymentMethod` prune the card's record, on top of the pull request that adds this skill.
 
 | File | Covered functions and role |
 | --- | --- |
-| `src/implementations/payment/saved-methods.ts` | `RecordSavedMethod`, `RememberSave`, `FindSavedMethod`, `ReadSavedMethod`, `prunedMetadata`, `oneAtATime` |
+| `src/implementations/payment/saved-methods.ts` | `RecordSavedMethod`, `RememberSave`, `FindSavedMethod`, `ReadSavedMethod`, `prunedMetadata`, `oneAtATime`, `DeleteSavedMethod`, `pruneRecords` |
 | `src/implementations/payment/follow.ts` | `LoadPayment`, which records a card on the first read past 3DS |
 | `src/implementations/payment/payments.ts` | `CreatePayment`, `initiation` and `initialPaymentOf` for `previous_payment_id`, `GetPayment` |
-| `src/implementations/payment/customers.ts` | `CreateCustomer`, `ListPaymentMethods`, `DetachPaymentMethod` |
+| `src/implementations/payment/customers.ts` | `CreateCustomer`, `ListPaymentMethods`, `DetachPaymentMethod` (through `DeleteSavedMethod`) |
 
 The `formal` entry in `verify.config.ts` covers these four files and `mapping.ts` (`ToPayment`, `WriteMetadata`, which decide whether a card is recorded). `http.ts` and `resources.ts` also shape what the chain does, but the gate does not see them. After a covered change, compare the model with these assumptions and rerun the check.
 
@@ -113,40 +115,18 @@ The 715 cards still in 3DS are saves with no `return` for that card. The 187 aut
 
 ## Findings
 
-Recorded in `FINDINGS` in `check.mts`, at seed `20261110`. Only the replace finding gates; the merge results below are for reference.
+`FINDINGS` in `check.mts` is empty: every rule holds under replace, the semantics the sandbox showed, at seed `20261110`.
 
-### NoRecordOutlivesInstrument, under replace (6 states; merge breaks the same way)
+### Fixed: NoRecordOutlivesInstrument, under replace
 
-Shrink path `6:0:1:0:2:2:2`. Scenario `{"callerKeys":15,"saves":["frictionless"],"ops":[{"kind":"detach","card":0}]}`.
+The check first recorded it at 6 states: a detach landing between a save's read and its write left a record for a card already gone, and `DetachPaymentMethod` never pruned at all. `DetachPaymentMethod` now runs `DeleteSavedMethod`, which reads the instrument's customer, then deletes the card and prunes its record inside that customer's `oneAtATime` chain, so a record being written in the same process lands first and is pruned with the card. The check printed `HOLDS NoRecordOutlivesInstrument_replace: the finding is gone (1000 runs)` on that change.
 
-```text
-  1 #0 create: POST /customers -> 201 [16 pairs; records none; cards none]
-  2 #1 save card1: POST /payments -> 201 [16 pairs; records none; cards card1]
-  3 #1 save card1: GET /customers/cus -> 200 [16 pairs; records none; cards card1]
-  4 #2 detach card1: DELETE /instruments/card1 -> 204 [16 pairs; records none; cards none]
-  5 #1 save card1: PATCH /customers/cus -> 204 [17 pairs; records card1=save1; cards none]
-  ! at quiescence the record for card1 names a card the customer no longer has
-```
+### Under merge, for reference
 
-`DetachPaymentMethod` deletes the instrument and leaves its record. The record stays until a later save prunes it, and under merge no save prunes it. In this trace the detach lands between the save's read and its write, so the save writes a record for a card that is already gone. A fix that prunes only inside `DetachPaymentMethod` would still lose this interleaving unless the detach waits for the record writes too. That last point is inferred from the trace.
+A merging provider keeps every key the module prunes, so no write the module can send removes a record. Two rules break under merge, and neither gates:
 
-### MetadataLimit, under merge only (9 states, not gated)
-
-Shrink path `46:10:8:12:12:2:2`. Scenario `{"callerKeys":18,"saves":["frictionless","frictionless"],"ops":[{"kind":"detach","card":2}]}`.
-
-```text
-  1 #0 create: POST /customers -> 201 [19 pairs; records none; cards none]
-  2 #1 save card1: POST /payments -> 201 [19 pairs; records none; cards card1]
-  3 #1 save card1: GET /customers/cus -> 200 [19 pairs; records none; cards card1]
-  4 #3 detach card1: DELETE /instruments/card1 -> 204 [19 pairs; records none; cards none]
-  5 #1 save card1: PATCH /customers/cus -> 204 [20 pairs; records card1=save1; cards none]
-  6 #2 save card2: POST /payments -> 201 [20 pairs; records card1=save1; cards card2]
-  7 #2 save card2: GET /customers/cus -> 200 [20 pairs; records card1=save1; cards card2]
-  8 #2 save card2: PATCH /customers/cus -> 204 [21 pairs; records card1=save1 card2=save2; cards card2]
-  ! the customer holds 21 pairs
-```
-
-The module prunes card1's stale record from the map it sends and counts 20 pairs. A merging provider keeps the pruned key, so the customer ends at 21. Under replace, the same write leaves 20 pairs. The module never sends more than 20 under either semantics.
+- `NoRecordOutlivesInstrument` (9 states): the detach prunes card1's record from the map it sends, and merge keeps it.
+- `MetadataLimit` (18 states): four saves reach 20 pairs, the detach of card2 sends 19 pairs that merge keeps at 20, and card1's save then counts 20 after pruning card2's record while merge leaves 21. The module never sends more than 20.
 
 ## Mutation evidence
 
@@ -160,4 +140,4 @@ Each scratch change below was applied to `src/`, run through the check, and reve
 | `initiation` never sets `previous_payment_id` | `BROKEN ChainMatchesRecord` under both semantics (7 states) |
 | `ListPaymentMethods` always answers `createdAt` 0 | `BROKEN ListMatchesRecord` under both semantics (7 states) |
 
-A mutation can also move the merge-only `MetadataLimit` break off 9 states, because a changed module shrinks to a different interleaving. `Settles` has no mutation: no plausible edit of `oneAtATime` leaves a write that never settles.
+A mutation can also move the merge-only `MetadataLimit` break off 18 states, because a changed module shrinks to a different interleaving. `Settles` has no mutation: no plausible edit of `oneAtATime` leaves a write that never settles.

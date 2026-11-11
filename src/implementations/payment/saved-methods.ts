@@ -1,4 +1,4 @@
-import { IsCkoCustomer } from "./resources";
+import { IsCkoCustomer, IsCkoInstrument } from "./resources";
 import type { Payment } from "@antelopejs/interface-payment";
 
 import type { CkoClient } from "./http";
@@ -125,7 +125,9 @@ const recordsInFlight = new Map<string, Promise<unknown>>();
 /**
  * Checkout.com replaces a customer's whole metadata on every PATCH and offers
  * no conditional write, so two records built from the same read keep only the
- * last. Writes for one customer therefore wait for each other in this process.
+ * last. Writes for one customer therefore wait for each other in this process,
+ * keyed by its `cus_` id; a card's save and detach also wait for each other,
+ * keyed by its `src_` id, always taken before the customer's.
  * Two processes saving cards for one customer at the same moment can still
  * lose one card's record, which leaves that card's charges to Checkout.com's
  * own lookup of the initial payment.
@@ -161,11 +163,69 @@ export async function RememberSave(
   if (!isString(customer) || !payment.paymentMethod) return;
   if (payment.status === "failed" || payment.status === "canceled") return;
   const instrument = payment.paymentMethod;
-  await oneAtATime(customer, () =>
-    RecordSavedMethod(client, customer, instrument, payment.id),
+  await oneAtATime(instrument, () =>
+    oneAtATime(customer, () =>
+      RecordSavedMethod(client, customer, instrument, payment.id),
+    ),
   ).catch((cause: unknown) => {
     process.stderr.write(
       `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the next read of the payment retries\n`,
     );
   });
+}
+
+async function pruneRecords(client: CkoClient, customerId: string) {
+  const { body: customer } = await client.send(
+    { method: "GET", path: `/customers/${customerId}` },
+    IsCkoCustomer,
+  );
+  const kept = prunedMetadata(customer);
+  const held = Object.keys(customer.metadata ?? {}).length;
+  if (Object.keys(kept).length === held) return;
+  await client.execute({
+    method: "PATCH",
+    path: `/customers/${customerId}`,
+    body: { metadata: kept },
+  });
+}
+
+async function deleteAndPrune(
+  client: CkoClient,
+  instrument: string,
+): Promise<void> {
+  const { body } = await client.send(
+    { method: "GET", path: `/instruments/${instrument}` },
+    IsCkoInstrument,
+  );
+  const remove = () =>
+    client.execute({ method: "DELETE", path: `/instruments/${instrument}` });
+  const customer = body.customer?.id;
+  if (!customer) {
+    await remove();
+    return;
+  }
+  await oneAtATime(customer, async () => {
+    await remove();
+    await pruneRecords(client, customer).catch((cause: unknown) => {
+      process.stderr.write(
+        `Checkout.com: ${instrument} was deleted but pruning its record from ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the customer's next save prunes it\n`,
+      );
+    });
+  });
+}
+
+/**
+ * Deletes a saved instrument and, when it belongs to a customer, the record of
+ * the payment that saved it. A save and a detach of one card wait for each
+ * other, each taking the card's chain before the customer's: a save that ran
+ * first has linked the card, so the detach finds its customer and prunes the
+ * record, and a save that runs after finds the card gone and records nothing.
+ * The instrument is gone once this resolves; a failed prune is reported, and
+ * the customer's next save prunes it.
+ */
+export function DeleteSavedMethod(
+  client: CkoClient,
+  instrument: string,
+): Promise<void> {
+  return oneAtATime(instrument, () => deleteAndPrune(client, instrument));
 }

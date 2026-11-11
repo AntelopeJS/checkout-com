@@ -15,6 +15,7 @@ import { ToPaymentMethod } from "./mapping";
 import { AssertCustomerId, AssertInstrumentId } from "./ids";
 import type { CkoCustomer, CkoCustomerRequest, CkoMetadata } from "./cko-types";
 import {
+  DeleteSavedMethod,
   IdempotencyMetadataKey,
   IsInternalCustomerKey,
   ReadSavedMethod,
@@ -192,7 +193,5 @@ export async function DetachPaymentMethod(
 ): Promise<void> {
   AssertInstrumentId(id);
   const { client } = GetAccount(provider);
-  await Translating(id, METHOD_ENTITY, () =>
-    client.execute({ method: "DELETE", path: `/instruments/${id}` }),
-  );
+  await Translating(id, METHOD_ENTITY, () => DeleteSavedMethod(client, id));
 }
