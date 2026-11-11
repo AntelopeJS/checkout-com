@@ -1,6 +1,6 @@
 {
   "name": "@antelopejs/checkout-com",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Checkout.com payments for AntelopeJS: implements the generic payment interface on the unified Payments API",
   "keywords": [
     "antelopejs",
@@ -8,6 +8,7 @@
     "checkout.com",
     "payment"
   ],
+  "homepage": "https://github.com/AntelopeJS/checkout-com#readme",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -15,6 +16,7 @@
   },
   "files": [
     "dist",
+    "!dist/test",
     "docs",
     "skills"
   ],
