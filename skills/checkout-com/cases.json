@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "checkout-com-base-url-403",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "My AntelopeJS project uses @antelopejs/checkout-com and every payment call fails with a 403 base_url_invalid. What do I need to configure?",
+      "expect": {
+        "skills": ["checkout-com"],
+        "acceptable": ["antelopejs", "taking-payments"],
+        "mustMention": ["baseUrl"]
+      }
+    },
+    {
+      "id": "checkout-com-webhook-key-casual",
+      "area": "modules",
+      "style": "casual",
+      "prompt": "checkout.com webhooks all rejected by VerifyWebhook in my antelope app, which key goes where",
+      "expect": {
+        "skills": ["checkout-com"],
+        "acceptable": ["antelopejs", "taking-payments", "api-interface"],
+        "mustMention": ["webhookSignatureKey"]
+      }
+    },
+    {
+      "id": "checkout-com-saved-card-chain",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "With @antelopejs/checkout-com, how does an off-session charge of a saved card tell Checkout.com which payment saved the card?",
+      "expect": {
+        "skills": ["checkout-com"],
+        "acceptable": ["antelopejs", "taking-payments"],
+        "mustMention": ["previous_payment_id"]
+      }
+    },
+    {
+      "id": "checkout-com-subscriptions",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "I want recurring subscriptions billed through Checkout.com in my AntelopeJS app. Which modules do I wire?",
+      "expect": {
+        "skills": ["checkout-com"],
+        "acceptable": ["antelopejs", "taking-payments", "subscriptions"],
+        "mustMention": ["payment-subscriptions"]
+      }
+    },
+    {
+      "id": "checkout-com-taking-payments-neighbour",
+      "area": "modules",
+      "style": "clean",
+      "prompt": "In my AntelopeJS module, how do I refund a payment through the payment interface without caring which provider is wired?",
+      "expect": {
+        "skills": ["taking-payments"],
+        "acceptable": ["antelopejs", "ajs-consume-interface"],
+        "avoid": ["checkout-com"]
+      }
+    }
+  ]
+}
