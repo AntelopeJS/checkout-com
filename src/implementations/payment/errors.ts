@@ -16,11 +16,12 @@ const BASE_URL_INVALID = "base_url_invalid";
 
 /**
  * 422 codes meaning the amount or the payment's balance rules out the action.
- * Checkout.com documents no refund-specific code, so an over-refund is expected
- * under the balance code.
+ * Checkout.com documents no refund-specific code, but the sandbox refuses an
+ * over-refund with `refund_amount_exceeds_balance` (observed 2026-11-10).
  */
 const STATE_CODES = new Set([
   "amount_exceeds_balance",
+  "refund_amount_exceeds_balance",
   "capture_value_greater_than_authorized",
   "capture_value_greater_than_remaining_authorized",
   "void_amount_invalid",

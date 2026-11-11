@@ -130,6 +130,12 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
     );
     assert.ok(state instanceof InvalidPaymentStateError);
     assert.equal(state.providerCode, "amount_exceeds_balance");
+    const overRefund = TranslateError(
+      apiError(422, ["refund_amount_exceeds_balance"]),
+      "pay_x",
+      ACTION_CONTEXT,
+    );
+    assert.ok(overRefund instanceof InvalidPaymentStateError);
     const malformed = TranslateError(
       apiError(422, ["currency_invalid"]),
       "pay_x",
