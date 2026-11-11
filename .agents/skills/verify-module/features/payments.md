@@ -34,7 +34,7 @@ An application module charges a card token with `CreatePayment` and reads the pa
 
 - `pay-approved`: a token becomes one payment request with the amount in minor units, currency, reference, processing channel, token source and the caller's idempotency key; it reads `pending` until Checkout.com has captured it, then `succeeded`, and Checkout.com itself holds it as captured.
 - `pay-declined`: a declined card is a `failed` payment carrying the insufficient-funds code and Checkout.com's response code, also on a later `GetPayment`; an unknown or malformed id is `PaymentNotFoundError`, the malformed one without a call.
-- `pay-idempotent`: the same key returns the first payment and Checkout.com answers the second request from its cache; a new key is a new payment.
+- `pay-idempotent`: two concurrent calls under one key create one payment, each returning it or a retryable `PaymentError` (`duplicate_request`, which the sandbox sometimes answers), and a retry returns it; the same key returns the first payment and Checkout.com answers the second request from its cache; a new key is a new payment.
 - `pay-3ds`: a challenged payment is `requires_action` with the redirect and the return URL as success and failure URL, reads `pending` while the payer is away, and ends `succeeded` or `failed` by the payer's outcome.
 
 ## How to get to it (user POV)

@@ -237,7 +237,7 @@ export class StandInServer {
       return this.record(call, reply, true);
     }
     if (this.inFlight.has(key)) {
-      return this.record(call, { status: CONFLICT }, true);
+      return this.record(call, duplicate(), true);
     }
     this.inFlight.add(key);
     try {
@@ -268,6 +268,23 @@ export class StandInServer {
     this.calls.push(recorded);
     return reply;
   }
+}
+
+/**
+ * A duplicate of a request still in flight. The sandbox answers it either
+ * with the first request's payment or with this 409 (observed 2026-11-10: 7
+ * of 8 concurrent pairs got the payment twice, 1 got the 409); the stand-in
+ * always answers the 409, the case a caller must handle.
+ */
+function duplicate(): StandInReply {
+  return {
+    status: CONFLICT,
+    body: {
+      request_id: "stand-in",
+      error_type: "request_invalid",
+      error_codes: ["duplicate_request"],
+    },
+  };
 }
 
 function mismatch(): StandInReply {

@@ -130,6 +130,49 @@ describe("[checkout-com] how payments are declared to the schemes", function () 
   });
 });
 
+describe("[checkout-com] one idempotency key", function () {
+  this.timeout(SUITE_TIMEOUT);
+
+  it("makes one payment of two concurrent calls under the same key", async function () {
+    const method = process.env.ANTELOPE_PAYMENT_TEST_METHOD;
+    if (!method) this.skip();
+    const request = {
+      amount: EUR,
+      reference: reference(),
+      paymentMethod: method,
+      offSession: true,
+    };
+    const shared = key();
+    const answers = await Promise.allSettled([
+      CreatePayment(request, shared),
+      CreatePayment(request, shared),
+    ]);
+    for (const answer of answers) {
+      if (answer.status === "fulfilled") continue;
+      const error: unknown = answer.reason;
+      assert.ok(
+        error instanceof PaymentError && error.name === "PaymentError",
+        "a refused duplicate is a plain, retryable PaymentError",
+      );
+      assert.equal(error.providerCode, "duplicate_request");
+    }
+    const retried = await CreatePayment(request, shared);
+    const ids = answers.flatMap((answer) =>
+      answer.status === "fulfilled" ? [answer.value.id] : [],
+    );
+    assert.ok(
+      ids.every((id) => id === retried.id),
+      "every answer and the retry name one payment",
+    );
+    const standIn = CurrentStandIn();
+    if (!standIn) return;
+    const created = standIn.calls.filter(
+      (call) => call.idempotencyKey === shared && !call.replayed,
+    );
+    assert.equal(created.length, 1, "Checkout.com created one payment");
+  });
+});
+
 describe("[checkout-com] 3D Secure", function () {
   this.timeout(SUITE_TIMEOUT);
 
