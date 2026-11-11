@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { createHmac, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import {
@@ -127,5 +129,55 @@ export function Settled(id: string, status: PaymentStatus): Promise<Payment> {
     () => GetPayment(id),
     (payment) => payment.status === status,
     `payment ${id} reaches ${status}`,
+  );
+}
+
+const BROWSER_BUDGET_MS = 30_000;
+const BROWSER_TIMEOUT_MS = 45_000;
+
+function isPastAuthentication(payment: Payment): boolean {
+  return payment.status !== "requires_action" && payment.status !== "pending";
+}
+
+async function openInBrowser(context: Mocha.Context, url: string) {
+  const browser = process.env.CKO_BROWSER;
+  if (!browser) context.skip();
+  await promisify(execFile)(
+    browser,
+    [
+      "--headless",
+      "--disable-gpu",
+      "--no-first-run",
+      `--virtual-time-budget=${BROWSER_BUDGET_MS}`,
+      "--dump-dom",
+      url,
+    ],
+    { timeout: BROWSER_TIMEOUT_MS },
+  );
+}
+
+/**
+ * Plays the payer through a frictionless 3DS redirect and returns the payment
+ * once it is past authentication. The stand-in authenticates on a plain visit;
+ * the sandbox runs 3DS in the page's script, so a live run opens the page in
+ * the headless Chrome or Chromium that `CKO_BROWSER` names, and skips without
+ * one.
+ */
+export async function PassAuthentication(
+  context: Mocha.Context,
+  payment: Payment,
+): Promise<Payment> {
+  if (payment.status !== "requires_action") return payment;
+  const url = payment.redirectUrl ?? "";
+  if (IsLive()) {
+    await openInBrowser(context, url);
+  } else {
+    const visit = await fetch(url);
+    assert.ok(visit.ok, `the redirect answered ${visit.status}`);
+  }
+  return WaitFor(
+    () => GetPayment(payment.id),
+    isPastAuthentication,
+    `payment ${payment.id} is past 3DS`,
   );
 }

@@ -205,7 +205,7 @@ describe("[checkout-com] hosted pages and customers", function () {
       key(),
     );
     const paymentId = standIn.payHostedPage(session.id, TEST_CARDS.approved);
-    await Settled(paymentId, "succeeded");
+    await standIn.settled();
 
     const envelope = {
       ...capturedFixture,

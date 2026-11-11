@@ -18,6 +18,7 @@ import {
   CardToken,
   Charge,
   IsLive,
+  PassAuthentication,
   ReadRaw,
   RequireStandIn,
   SUITE_TIMEOUT,
@@ -43,7 +44,7 @@ function lastPaymentRequest(): JsonObject {
 async function savingPayment(context: Mocha.Context, provider?: string) {
   const token = await CardToken(context, TEST_CARDS.approved);
   const customer = await CreateCustomer({ email: email() }, key(), provider);
-  const payment = await CreatePayment(
+  const created = await CreatePayment(
     {
       amount: EUR,
       reference: reference(),
@@ -55,6 +56,7 @@ async function savingPayment(context: Mocha.Context, provider?: string) {
     key(),
     provider,
   );
+  const payment = await PassAuthentication(context, created);
   return { customer: customer.id, payment };
 }
 
@@ -199,10 +201,10 @@ describe("[checkout-com] 3D Secure", function () {
     const meanwhile = await GetPayment(payment.id);
     assert.equal(
       meanwhile.status,
-      "pending",
-      "a read cannot see the redirect, so it says pending",
+      "requires_action",
+      "a read still sees the redirect",
     );
-    assert.equal(meanwhile.redirectUrl, undefined);
+    assert.equal(meanwhile.redirectUrl, payment.redirectUrl);
     if (IsLive()) return;
     RequireStandIn(this).completeChallenge(payment.id, true);
     await Settled(payment.id, "succeeded");

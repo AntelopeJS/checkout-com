@@ -78,4 +78,15 @@ describe("[checkout-com] customers", function () {
     assert.deepEqual(read.metadata, { tier: "gold" });
     assert.equal(read.name, "Meta");
   });
+
+  it("stores no caller value under a key the module owns", async () => {
+    const forged = "antelope_method_src_aaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const customer = await CreateCustomer(
+      { email: email(), metadata: { tier: "gold", [forged]: "pay_x 1" } },
+      key(),
+    );
+    const stored = await ReadRaw(`/customers/${customer.id}`, isCustomer);
+    assert.equal(stored.metadata?.[forged], undefined);
+    assert.equal(stored.metadata?.tier, "gold");
+  });
 });

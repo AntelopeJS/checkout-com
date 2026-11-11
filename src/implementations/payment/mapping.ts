@@ -30,10 +30,10 @@ import type {
  * `authorized` in the contract.
  */
 export const CAPTURE_KEY = "antelope_capture";
-export const MANUAL_CAPTURE = "manual";
+const MANUAL_CAPTURE = "manual";
 export const AUTOMATIC_CAPTURE = "auto";
 
-/** Metadata key naming the customer a hosted session saves the method for. */
+/** Metadata key naming the customer a saving payment or hosted session saves the method for. */
 export const SAVE_FOR_KEY = "antelope_save_for";
 
 /** Checkout.com's refund request has no reason field; it is kept here. */
@@ -47,6 +47,24 @@ export type InternalMetadata = {
 };
 
 const INTERNAL_KEYS = new Set([CAPTURE_KEY, SAVE_FOR_KEY, REFUND_REASON_KEY]);
+
+/** What a payment or hosted session request asks of capture and saving. */
+interface InternalIntent {
+  authorizeOnly?: boolean;
+  savePaymentMethod?: boolean;
+  customer?: string;
+}
+
+/** The entries this module adds to a payment's metadata for `request`. */
+export function InternalMetadataOf(request: InternalIntent): InternalMetadata {
+  const internal: InternalMetadata = {
+    [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
+  };
+  if (request.savePaymentMethod && request.customer) {
+    internal[SAVE_FOR_KEY] = request.customer;
+  }
+  return internal;
+}
 
 const STATUS_BY_CKO = {
   Authorized: "authorized",
@@ -124,17 +142,25 @@ function ReadMetadata(
   return Object.fromEntries(own.map(([key, value]) => [key, String(value)]));
 }
 
+/**
+ * The metadata sent with a payment: the caller's, without any key this module
+ * owns, so a caller's value is never read back as one of the module's
+ * markers, and then the module's own entries.
+ */
 export function WriteMetadata(
   metadata: Record<string, string> | undefined,
   internal: Record<string, string>,
 ): CkoMetadata {
-  return { ...metadata, ...internal };
+  const own = Object.entries(metadata ?? {}).filter(
+    ([key]) => !INTERNAL_KEYS.has(key),
+  );
+  return { ...Object.fromEntries(own), ...internal };
 }
 
 /**
  * Checkout.com says `Pending` both for a payment waiting on the payer and for
- * one simply in flight; the redirect link is the discriminator, and it is only
- * present on the answer to the call that created the payment.
+ * one simply in flight; the redirect link, present on the creating answer and
+ * on reads until the payer is past 3DS, is the discriminator.
  */
 export function ToPaymentStatus(payment: CkoPayment): PaymentStatus {
   const status = LookUp(STATUS_BY_CKO, payment.status) ?? "pending";

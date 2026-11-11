@@ -102,7 +102,7 @@ const payIdempotent: Journey = {
 };
 
 const pay3ds: Journey = {
-  title: "a payment that needs 3-D Secure comes back as requires_action with the payer's redirect, reads pending afterwards, and ends by the payer's outcome",
+  title: "a payment that needs 3-D Secure comes back as requires_action with the payer's redirect, keeps both on reads while the payer is away, and ends by the payer's outcome",
   entryPoint: "`CreatePayment` with the 3-D Secure challenge test card, the payer completing or failing the challenge at the stand-in, then `GetPayment`",
   async run(context) {
     await withSession(context, async (session) => {
@@ -117,7 +117,7 @@ const pay3ds: Journey = {
         same("the return URL became both the success and failure URL", [pick(sent?.body, "success_url"), pick(sent?.body, "failure_url")], ["https://merchant.invalid/return", "https://merchant.invalid/return"]),
       ]);
       const waiting = await call(session, "GetPayment while the payer is away", "GetPayment", [id]);
-      context.expect(waiting.folder, [same("the waiting payment reads pending without a redirect", [pick(waiting.value, "status"), pick(waiting.value, "redirectUrl") ?? null], ["pending", null])]);
+      context.expect(waiting.folder, [same("the waiting payment still reads requires_action with the same redirect", [pick(waiting.value, "status"), pick(waiting.value, "redirectUrl") ?? null], ["requires_action", pick(challenge.value, "redirectUrl") ?? null])]);
       session.standIn.completeChallenge(id, true);
       await session.standIn.settled();
       const done = await call(session, "GetPayment after the payer authenticated", "GetPayment", [id]);

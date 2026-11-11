@@ -4,6 +4,7 @@ import {
   CreatePayment,
   DetachPaymentMethod,
   GetCustomer,
+  GetPayment,
   ListPaymentMethods,
   PAYMENT_METHOD_TYPES,
   type PaymentMethod,
@@ -15,6 +16,7 @@ import { CurrentStandIn } from "./standin";
 import type { JsonObject } from "./standin/wire";
 import {
   CardToken,
+  PassAuthentication,
   SUITE_TIMEOUT,
   Settled,
   SuiteTarget,
@@ -41,18 +43,21 @@ describe("[checkout-com] saved payment methods", function () {
   it("saves a method against a customer and lists it back", async function () {
     const token = await CardToken(this, TEST_CARDS.approved);
     const customer = await CreateCustomer({ email: email() }, key());
-    const payment = await CreatePayment(
-      {
-        amount: CHARGE,
-        reference: reference(),
-        paymentMethod: token,
-        customer: customer.id,
-        savePaymentMethod: true,
-        returnUrl: RETURN_URL,
-      },
-      key(),
+    const payment = await PassAuthentication(
+      this,
+      await CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: token,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ),
     );
-    await Settled(payment.id, "succeeded");
+    assert.equal(payment.status, "succeeded");
 
     const methods = await ListPaymentMethods(customer.id);
     assert.equal(methods.length, 1, "the charged method must be saved");
@@ -93,16 +98,19 @@ describe("[checkout-com] saved payment methods", function () {
       { email: email(), metadata: { tier: "gold" } },
       key(),
     );
-    await CreatePayment(
-      {
-        amount: CHARGE,
-        reference: reference(),
-        paymentMethod: token,
-        customer: customer.id,
-        savePaymentMethod: true,
-        returnUrl: RETURN_URL,
-      },
-      key(),
+    await PassAuthentication(
+      this,
+      await CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: token,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ),
     );
     assert.deepEqual((await GetCustomer(customer.id)).metadata, {
       tier: "gold",
@@ -159,20 +167,49 @@ describe("[checkout-com] saved payment methods without a record", function () {
       ]),
     );
     const customer = await CreateCustomer({ email: email(), metadata }, key());
-    const payment = await CreatePayment(
-      {
-        amount: CHARGE,
-        reference: reference(),
-        paymentMethod: token,
-        customer: customer.id,
-        savePaymentMethod: true,
-        returnUrl: RETURN_URL,
-      },
-      key(),
+    const payment = await PassAuthentication(
+      this,
+      await CreatePayment(
+        {
+          amount: CHARGE,
+          reference: reference(),
+          paymentMethod: token,
+          customer: customer.id,
+          savePaymentMethod: true,
+          returnUrl: RETURN_URL,
+        },
+        key(),
+      ),
     );
     assert.ok(payment.paymentMethod, "the payment itself is unaffected");
     const [method] = await ListPaymentMethods(customer.id);
     assert.equal(method.createdAt, 0);
     assert.deepEqual((await GetCustomer(customer.id)).metadata, metadata);
+  });
+});
+
+describe("[checkout-com] metadata the module owns", function () {
+  this.timeout(SUITE_TIMEOUT);
+
+  it("takes no caller metadata for the module's own record of a save", async function () {
+    const target = SuiteTarget();
+    if (!target.publicKey) this.skip();
+    const instrument = await MintInstrument(target, TEST_CARDS.approved);
+    const other = await CreateCustomer({ email: email() }, key());
+    const charge = await CreatePayment(
+      {
+        amount: CHARGE,
+        reference: reference(),
+        paymentMethod: instrument,
+        metadata: { antelope_save_for: other.id },
+      },
+      key(),
+    );
+    await GetPayment(charge.id);
+    assert.deepEqual(
+      await ListPaymentMethods(other.id),
+      [],
+      "a payment that did not ask to save links and records nothing",
+    );
   });
 });

@@ -29,7 +29,7 @@ An application module keeps customers and their saved cards, and charges a saved
 ## Sub-features
 
 - `customer-lifecycle`: a customer needs an email, keeps its name and metadata, reads back without the module's own bookkeeping, has its email kept unique, and is gone after `DeleteCustomer`.
-- `saved-card`: a payment with `savePaymentMethod` stores the card as an instrument that `ListPaymentMethods` returns, starts the series customer-initiated with the mandate asked of 3-D Secure, an `offSession` charge is merchant-initiated, Recurring and chained to the saving payment, Checkout.com's customer record holds the chain under `antelope_method_<src_…>`, and `DetachPaymentMethod` empties the list.
+- `saved-card`: a payment with `savePaymentMethod` comes back `requires_action`, because Checkout.com sends every 3-D Secure payment through the payer's browser; once the payer opens the redirect, `GetPayment` reads it `succeeded` with the card stored as an instrument that `ListPaymentMethods` returns. The saving payment starts the series customer-initiated with the mandate asked of 3-D Secure, an `offSession` charge is merchant-initiated, Recurring and chained to the saving payment, Checkout.com's customer record holds the chain under `antelope_method_<src_…>`, and `DetachPaymentMethod` empties the list.
 
 ## How to get to it (user POV)
 

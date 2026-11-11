@@ -63,13 +63,14 @@ function prunedMetadata(customer: CkoCustomer): CkoMetadata {
 }
 
 /**
- * Records the payment that stored an instrument, the first time it is seen.
- * Returns whether the record is in place afterwards: Checkout.com allows 20
- * metadata entries per customer, and a customer already at the limit gets no
- * record, which leaves later charges to Checkout.com's own lookup of the
- * initial payment.
+ * Records the payment that stored an instrument, the first time it is seen,
+ * and links the instrument to the customer when the customer does not list it
+ * yet, as for an instrument saved from an earlier payment. Returns whether the
+ * record is in place afterwards: Checkout.com allows 20 metadata entries per
+ * customer, and a customer already at the limit gets no record, which leaves
+ * later charges to Checkout.com's own lookup of the initial payment.
  */
-export async function RecordSavedMethod(
+async function RecordSavedMethod(
   client: CkoClient,
   customerId: string,
   instrument: string,
@@ -83,6 +84,13 @@ export async function RecordSavedMethod(
     IsCkoCustomer,
   );
   if (ReadSavedMethod(customer.metadata, instrument)) return true;
+  if (!(customer.instruments ?? []).some(({ id }) => id === instrument)) {
+    await client.execute({
+      method: "PATCH",
+      path: `/instruments/${instrument}`,
+      body: { customer: { id: customerId } },
+    });
+  }
   const metadata = {
     ...prunedMetadata(customer),
     [methodKey(instrument)]:
@@ -113,13 +121,13 @@ export async function FindSavedMethod(
 }
 
 /**
- * Records the card a hosted page saved for `customer`, once its payment is
- * known: from `GetCheckoutSession` reading the completed session, or from a
- * payment webhook, whichever comes first. The payment has already happened, so
- * a failure is reported rather than thrown, and the next read or delivery
- * tries again.
+ * Records the card a payment saved for `customer` once the payment carries
+ * it: on the answer to `CreatePayment`, or, for a payment that sent the payer
+ * through 3DS or a hosted page first, on the first read or webhook that sees
+ * it authorized. The payment has already happened, so a failure is reported
+ * rather than thrown, and the next read or delivery tries again.
  */
-export async function RememberHostedSave(
+export async function RememberSave(
   client: CkoClient,
   customer: MetadataValue,
   payment: Payment,
@@ -133,7 +141,7 @@ export async function RememberHostedSave(
     payment.id,
   ).catch((cause: unknown) => {
     process.stderr.write(
-      `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)})\n`,
+      `Checkout.com: payment ${payment.id} saved ${payment.paymentMethod} but recording it against ${customer} failed (${cause instanceof Error ? cause.message : String(cause)}); the next read of the payment retries\n`,
     );
   });
 }

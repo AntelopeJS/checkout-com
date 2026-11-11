@@ -39,6 +39,8 @@ export interface Route {
   handler: Handler;
   isIdempotent?: boolean;
   isPublic?: boolean;
+  /** A page the payer's browser opens, which takes no key. */
+  isOpen?: boolean;
 }
 
 export interface RecordedCall {
@@ -184,6 +186,7 @@ export class StandInServer {
   }
 
   private isAuthorized(request: IncomingMessage, route: Route): boolean {
+    if (route.isOpen) return true;
     const key = route.isPublic ? this.keys.publicKey : this.keys.secretKey;
     return request.headers.authorization === `Bearer ${key}`;
   }

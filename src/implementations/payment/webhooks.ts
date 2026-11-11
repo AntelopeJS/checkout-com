@@ -13,7 +13,6 @@ import { Translating } from "./errors";
 import { LoadPayment } from "./follow";
 import { AssertGenuine } from "./signature";
 import type { CkoDelivery, CkoEventEnvelope, JsonValue } from "./cko-types";
-import { RememberHostedSave } from "./saved-methods";
 import { type Account, GetAccount } from "./accounts";
 import {
   AUTOMATIC_CAPTURE,
@@ -97,11 +96,10 @@ function isAutomaticApproval(envelope: CkoEventEnvelope): boolean {
 const paymentEvent: EventBuilder = async (account, envelope, type) => {
   if (isAutomaticApproval(envelope)) return undefined;
   const { data } = envelope;
-  const payment = await LoadPayment(account.client, data.id);
-  await RememberHostedSave(
+  const payment = await LoadPayment(
     account.client,
+    data.id,
     data.metadata?.[SAVE_FOR_KEY],
-    payment,
   );
   return { type, payment };
 };

@@ -44,8 +44,11 @@ Checkout.com has no subscription resource.
   captured it; `authorized` means an `authorizeOnly` hold.
   `CapturePayment` refuses anything but an `authorizeOnly` payment
   (`automatic_capture`), and a 3DS-pending payment cannot be cancelled.
-- `GetPayment` on a payment waiting for 3DS reads `pending`, without
-  `redirectUrl`: only `CreatePayment` sees the redirect.
+- Every payment asking for 3DS, a saving payment always, comes back
+  `requires_action`, even for a frictionless card; `GetPayment` keeps
+  `requires_action` and `redirectUrl` until the payer is past 3DS.
+- A card saved through 3DS is recorded on the first `GetPayment` or payment
+  webhook after authentication (`antelope_save_for` marker).
 - Refunds come back `pending`; the webhook settles them. Refund ids are
   `<pay_…>:<act_…>` — opaque.
 - Off-session charges are merchant-initiated and chained (`previous_payment_id`)

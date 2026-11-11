@@ -15,7 +15,7 @@ import type { CkoClient, CkoResponse } from "./http";
 import { type Account, GetAccount } from "./accounts";
 import { TranslateError, Translating } from "./errors";
 import { FollowPayment, LoadPayment, ReadPayment } from "./follow";
-import { FindSavedMethod, RecordSavedMethod } from "./saved-methods";
+import { FindSavedMethod, RememberSave } from "./saved-methods";
 import { LookUp } from "./lookup";
 import type {
   CkoActionAccepted,
@@ -27,7 +27,8 @@ import type {
 import {
   AUTOMATIC_CAPTURE,
   CAPTURE_KEY,
-  MANUAL_CAPTURE,
+  InternalMetadataOf,
+  SAVE_FOR_KEY,
   ToPayment,
   ToPaymentStatus,
   WriteMetadata,
@@ -138,9 +139,7 @@ async function buildRequest(
     reference: request.reference,
     capture: !request.authorizeOnly,
     processing_channel_id: account.processingChannelId,
-    metadata: WriteMetadata(request.metadata, {
-      [CAPTURE_KEY]: request.authorizeOnly ? MANUAL_CAPTURE : AUTOMATIC_CAPTURE,
-    }),
+    metadata: WriteMetadata(request.metadata, InternalMetadataOf(request)),
   };
   if (request.description) {
     sent.description = request.description;
@@ -153,48 +152,6 @@ async function buildRequest(
     sent.failure_url = request.returnUrl;
   }
   return { ...sent, ...(await initiation(account, request)) };
-}
-
-async function linkInstrument(
-  account: Account,
-  instrument: string,
-  customer: string,
-): Promise<void> {
-  await account.client.execute({
-    method: "PATCH",
-    path: `/instruments/${instrument}`,
-    body: { customer: { id: customer } },
-  });
-}
-
-/**
- * The charge has happened by the time this runs, so a failure here must not
- * turn into a rejected CreatePayment that a caller would retry under a new
- * key. It is reported, and a replay of the same key runs it again.
- */
-async function rememberSavedMethod(
-  account: Account,
-  request: PaymentRequest,
-  payment: Payment,
-): Promise<void> {
-  const instrument = payment.paymentMethod;
-  if (!request.savePaymentMethod || !request.customer || !instrument) return;
-  if (payment.status === "failed" || payment.status === "canceled") return;
-  try {
-    if (request.paymentMethod?.startsWith("src_")) {
-      await linkInstrument(account, instrument, request.customer);
-    }
-    await RecordSavedMethod(
-      account.client,
-      request.customer,
-      instrument,
-      payment.id,
-    );
-  } catch (error) {
-    process.stderr.write(
-      `Checkout.com: payment ${payment.id} saved ${instrument} but recording it against ${request.customer} failed (${error instanceof Error ? error.message : String(error)}); replay the same idempotency key to retry\n`,
-    );
-  }
 }
 
 export async function CreatePayment(
@@ -219,7 +176,7 @@ export async function CreatePayment(
       { ...body, metadata: body.metadata ?? sent.metadata },
       { requested: request.amount },
     );
-    await rememberSavedMethod(account, request, payment);
+    await RememberSave(account.client, sent.metadata?.[SAVE_FOR_KEY], payment);
     return payment;
   } catch (error) {
     throw TranslateError(
