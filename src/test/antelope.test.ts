@@ -6,6 +6,7 @@ import {
 
 import { type Config, DefaultBaseUrl } from "../config";
 import { MintInstrument, type Target } from "./mint";
+import { REFUNDS_BLOCKED_REASON, RefundsBlocked } from "./balance";
 import { type LiveEnvironment, ResolveEnvironment } from "./environment";
 import {
   RegisterStandIn,
@@ -65,6 +66,20 @@ async function mintTestMethods(target: Target): Promise<void> {
     target,
     TEST_CARDS.insufficientFunds,
   );
+}
+
+/**
+ * A sandbox account without balance accepts every refund with a 202 and fails
+ * it with 50003, so the refund tests could only fail. One probe decides it
+ * per live run: blocked, they skip with the reason; otherwise, a probe that
+ * could not tell included, they run.
+ */
+async function probeRefunds(target: Target): Promise<void> {
+  const method = process.env.ANTELOPE_PAYMENT_TEST_METHOD;
+  if (!method) return;
+  const isBlocked = await RefundsBlocked(target, method).catch(() => false);
+  if (!isBlocked) return;
+  process.env.CKO_TEST_REFUNDS_BLOCKED = REFUNDS_BLOCKED_REASON;
 }
 
 function accountConfig(target: Target): Config {
@@ -134,6 +149,7 @@ export default defineConfig({
           : await standInTarget();
       exposeTarget(target, environment.mode);
       await mintTestMethods(target);
+      if (environment.mode === "live") await probeRefunds(target);
       mongod = await MongoMemoryServer.create({
         binary: { version: MONGO_VERSION },
       });
