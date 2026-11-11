@@ -1,6 +1,6 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, EUR, answered, call, callsTo, challenged, fresh, mintToken, pay, paymentAtProvider, pick, same, text, thrown, withSession } from "./session.ts";
+import { CARDS, EUR, acceptedPaymentRequest, answered, call, callsTo, challenged, fresh, mintToken, pay, paymentAtProvider, pick, same, text, thrown, withSession } from "./session.ts";
 
 const payApproved: Journey = {
   title: "a card token becomes one payment at Checkout.com with the amount, reference and processing channel, reads back as succeeded once captured, and the provider holds it as captured",
@@ -137,8 +137,9 @@ const payThroughStandIn: Journey = {
   entryPoint: "`CreatePayment` and `GetPayment` through core against the stand-in",
   async run(context) {
     await withSession(context, async (session) => {
-      const created = await pay(session, "CreatePayment", CARDS.approved);
-      context.expect(created.folder, [answered(created), same("Checkout.com accepted the payment request", (callsTo(session.standIn, "POST", "/payments")[0]?.status ?? 0) < 300, true)], { critical: true });
+      const reference = fresh("order");
+      const created = await pay(session, "CreatePayment", CARDS.approved, { request: { reference } });
+      context.expect(created.folder, [answered(created), ...acceptedPaymentRequest(session, reference)], { critical: true });
       await session.standIn.settled();
       const read = await call(session, "GetPayment", "GetPayment", [text(pick(created.value, "id"))]);
       context.expect(read.folder, [same("the payment reads succeeded", pick(read.value, "status"), "succeeded")]);

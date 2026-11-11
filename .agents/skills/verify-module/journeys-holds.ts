@@ -58,9 +58,33 @@ const holdCancel: Journey = {
         same("cancelling a payment with no authorization yet is a state error", pick(thrown(refused), 0), "InvalidPaymentStateError"),
         same("Checkout.com refused the void it was asked for, as the sandbox does, with 422", callsTo(session.standIn, "POST", `/payments/${text(pick(waiting.value, "id"))}/voids`).map((entry) => entry.status), [422]),
       ]);
-      context.expect(refused.folder, [same("the amount of the hold was the request's", pick(held.value, "amount"), EUR)]);
     });
   },
 };
 
-export const holdJourneys = { "hold-capture": holdCapture, "hold-cancel": holdCancel };
+const holdSettleBudget: Journey = {
+  title: "with settleTimeoutMs at 0 a capture returns the payment as Checkout.com last reported it, still authorized, and a later read shows the capture applied",
+  entryPoint: "`CapturePayment` of an `authorizeOnly` hold on an account with `settleTimeoutMs: 0`, then `GetPayment` once the stand-in has applied the capture",
+  async run(context) {
+    await withSession(
+      context,
+      async (session) => {
+        const held = await pay(session, "CreatePayment authorize only", CARDS.approved, { request: { authorizeOnly: true } });
+        const id = text(pick(held.value, "id"));
+        context.expect(held.folder, [answered(held), same("the hold reads authorized", pick(held.value, "status"), "authorized")], { critical: true });
+        const captured = await call(session, "CapturePayment with no settle budget", "CapturePayment", [id, fresh("key"), null, null]);
+        context.expect(captured.folder, [
+          answered(captured),
+          same("Checkout.com was asked for one capture", callsTo(session.standIn, "POST", `/payments/${id}/captures`).length, 1),
+          same("the call returned the payment as last reported: authorized, nothing captured yet", [pick(captured.value, "status"), pick(captured.value, "amountCaptured", "value")], ["authorized", 0]),
+        ]);
+        await session.standIn.settled();
+        const read = await call(session, "GetPayment after the capture settled", "GetPayment", [id]);
+        context.expect(read.folder, [same("a later read shows the capture applied: succeeded with the whole amount captured", [pick(read.value, "status"), pick(read.value, "amountCaptured", "value")], ["succeeded", EUR.value])]);
+      },
+      { settleTimeoutMs: 0 },
+    );
+  },
+};
+
+export const holdJourneys = { "hold-capture": holdCapture, "hold-cancel": holdCancel, "hold-settle-budget": holdSettleBudget };

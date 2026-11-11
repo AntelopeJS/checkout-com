@@ -159,6 +159,22 @@ export function call(session: Session, name: string, path: string, args: Json[])
 
 let counter = 0;
 
+/** What this run's stand-in recorded of the one payment request a journey sent with `reference`: it is the only `POST /payments`, answered 201 or 202 (the stand-in answers 401 to any key but its secret key), and a JSON object carrying the amount, currency, reference and the configured processing channel. */
+export function acceptedPaymentRequest(session: Session, reference: string): Check[] {
+  const sent = callsTo(session.standIn, "POST", "/payments");
+  const body = sent[0]?.body;
+  return [
+    same("the stand-in this run configured as baseUrl recorded exactly one payment request", sent.length, 1),
+    same("it answered 201 or 202, which only the configured secret key earns", [201, 202].includes(sent[0]?.status ?? 0), true),
+    same("the request body is a JSON object", isRecord(body), true),
+    same(
+      "it carries the amount, currency, reference and the configured processing channel",
+      [pick(body, "amount"), pick(body, "currency"), pick(body, "reference"), pick(body, "processing_channel_id")],
+      [EUR.value, EUR.currency, reference, session.keys.processingChannel],
+    ),
+  ];
+}
+
 /** A fresh idempotency key or reference, unique within the process. */
 export function fresh(prefix: string): string {
   counter += 1;

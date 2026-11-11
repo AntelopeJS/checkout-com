@@ -15,7 +15,7 @@ The fixed journey every verdict runs: load the module as `local`, charge one car
 ## Sub-features
 
 - `module-dev` is the pack's journey: the project answers, the consumer loads the payment interface, Ctrl+C exits 130.
-- `pay-through-stand-in`: one `CreatePayment` reaches the stand-in and the payment reads `succeeded`.
+- `pay-through-stand-in`: one `CreatePayment` reaches the stand-in as the only `POST /payments`, answered 201 or 202 and carrying the amount, currency, reference and processing channel, and the payment reads `succeeded`.
 
 ## How to get to it (user POV)
 

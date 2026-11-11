@@ -1,17 +1,15 @@
 import type { Journey } from "@antelopejs/tooling-configs/verify";
 
-import { CARDS, answered, callsTo, pay, same, withSession } from "./session.ts";
+import { CARDS, acceptedPaymentRequest, answered, fresh, pay, withSession } from "./session.ts";
 
 const requestContract: Journey = {
   title: "a request to Checkout.com is a JSON POST under the secret key as a bearer token, to the configured base URL",
   entryPoint: "`CreatePayment` through core against the stand-in",
   async run(context) {
     await withSession(context, async (session) => {
-      const created = await pay(session, "CreatePayment", CARDS.approved);
-      context.expect(created.folder, [
-        answered(created),
-        same("the stand-in, which refuses any other key, answered the payment request with a success", (callsTo(session.standIn, "POST", "/payments")[0]?.status ?? 0) < 300, true),
-      ]);
+      const reference = fresh("order");
+      const created = await pay(session, "CreatePayment", CARDS.approved, { request: { reference } });
+      context.expect(created.folder, [answered(created), ...acceptedPaymentRequest(session, reference)]);
     });
   },
 };
