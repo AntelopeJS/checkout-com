@@ -40,13 +40,14 @@ const refundFlow: Journey = {
 
 const refundDeclined: Journey = {
   title: "an issuer that refuses a refund is a PaymentError that carries the code, and the refund is not left half made",
-  entryPoint: "`RefundPayment` of 3738, the amount the stand-in documents as refused, through core",
+  entryPoint: "`RefundPayment` through core after the stand-in's issuer was told to refuse the next refund",
   async run(context) {
     await withSession(context, async (session) => {
       const paid = await pay(session, "CreatePayment", CARDS.approved, { request: { amount: { value: 5000, currency: "EUR" } } });
       const id = text(pick(paid.value, "id"));
       await session.standIn.settled();
-      const refused = await call(session, "RefundPayment of 3738", "RefundPayment", [{ payment: id, amount: { value: 3738, currency: "EUR" } }, fresh("key"), null]);
+      session.standIn.refuseNextRefund();
+      const refused = await call(session, "RefundPayment the issuer refuses", "RefundPayment", [{ payment: id, amount: { value: 1000, currency: "EUR" } }, fresh("key"), null]);
       context.expect(refused.folder, [
         same("the refusal is a PaymentError", pick(thrown(refused), 0), "PaymentError"),
         same("it carries Checkout.com's code", text(pick(thrown(refused), 1)).includes("refund_authorization_declined"), true),

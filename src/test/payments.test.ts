@@ -30,7 +30,6 @@ import {
 
 const EUR = { value: 2500, currency: "EUR" };
 const RETURN_URL = "https://merchant.invalid/return";
-const REFUND_DECLINED_AMOUNT = 3738;
 
 function lastPaymentRequest(): JsonObject {
   const calls = CurrentStandIn()?.calls ?? [];
@@ -266,13 +265,11 @@ describe("[checkout-com] refunds", function () {
   });
 
   it("reports an issuer's refusal of the refund as a failed call", async function () {
-    const charge = await Charge(this, { amount: REFUND_DECLINED_AMOUNT * 2 });
-    const payment = await Settled(charge.id, "succeeded");
+    const standIn = RequireStandIn(this);
+    const payment = await Settled((await Charge(this)).id, "succeeded");
+    standIn.refuseNextRefund();
     const error = await RefundPayment(
-      {
-        payment: payment.id,
-        amount: { value: REFUND_DECLINED_AMOUNT, currency: "EUR" },
-      },
+      { payment: payment.id, amount: { value: 1000, currency: "EUR" } },
       key(),
     ).catch((cause: unknown) => cause);
     assert.ok(error instanceof PaymentError);
