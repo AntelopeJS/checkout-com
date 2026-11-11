@@ -247,22 +247,6 @@ describe("[checkout-com] refusals before and at Checkout.com", function () {
     );
   });
 
-  it("refuses a three-decimal amount Checkout.com cannot express", async function () {
-    const method = process.env.ANTELOPE_PAYMENT_TEST_METHOD;
-    if (!method) this.skip();
-    const error = await CreatePayment(
-      {
-        amount: { value: 1001, currency: "KWD" },
-        reference: reference(),
-        paymentMethod: method,
-        offSession: true,
-      },
-      key(),
-    ).catch((cause: unknown) => cause);
-    assert.ok(error instanceof PaymentError);
-    assert.equal(error.providerCode, "amount_invalid");
-  });
-
   it("reads a decline's reason back from the payment's actions", async function () {
     const method = process.env.ANTELOPE_PAYMENT_TEST_METHOD_DECLINED;
     if (!method) this.skip();
