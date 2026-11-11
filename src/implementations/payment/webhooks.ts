@@ -4,6 +4,7 @@ import { PaymentError } from "@antelopejs/interface-payment";
 import type {
   PaymentEvent,
   PaymentEventType,
+  PaymentStatus,
   WebhookRequest,
 } from "@antelopejs/interface-payment";
 
@@ -36,6 +37,28 @@ const PAYMENT_EVENTS = {
   payment_pending: "payment.pending",
   payment_voided: "payment.canceled",
 } satisfies Record<string, PaymentEventType>;
+
+/**
+ * Actions Checkout.com refused after accepting them, and an authentication
+ * that failed. They change nothing or end the payment, so the event says what
+ * the payment read back now is: a declined capture or void leaves the hold
+ * `authorized`, a failed authentication leaves it `failed`. The value here is
+ * the kind of record, the type comes from {@link EVENT_BY_STATUS}.
+ */
+const OUTCOME_EVENTS = {
+  payment_authentication_failed: "payment.failed",
+  payment_capture_declined: "payment.authorized",
+  payment_void_declined: "payment.authorized",
+} satisfies Record<string, PaymentEventType>;
+
+const EVENT_BY_STATUS = {
+  authorized: "payment.authorized",
+  canceled: "payment.canceled",
+  failed: "payment.failed",
+  pending: "payment.pending",
+  requires_action: "payment.pending",
+  succeeded: "payment.succeeded",
+} satisfies Record<PaymentStatus, PaymentEventType>;
 
 const REFUND_EVENTS = {
   [REFUNDED]: "refund.succeeded",
@@ -83,6 +106,11 @@ const paymentEvent: EventBuilder = async (account, envelope, type) => {
   return { type, payment };
 };
 
+const outcomeEvent: EventBuilder = async (account, envelope) => {
+  const payment = await LoadPayment(account.client, envelope.data.id);
+  return { type: EVENT_BY_STATUS[payment.status], payment };
+};
+
 const refundEvent: EventBuilder = (_account, envelope, type) => {
   const { data } = envelope;
   const refund = ToRefund(
@@ -111,6 +139,7 @@ const disputeEvent: EventBuilder = (_account, envelope, type) => {
 
 const BUILDERS: [Record<string, PaymentEventType>, EventBuilder][] = [
   [PAYMENT_EVENTS, paymentEvent],
+  [OUTCOME_EVENTS, outcomeEvent],
   [REFUND_EVENTS, refundEvent],
   [DISPUTE_EVENTS, disputeEvent],
 ];

@@ -164,6 +164,51 @@ describe("[checkout-com] webhook normalisation", function () {
   });
 });
 
+describe("[checkout-com] webhooks for actions Checkout.com declined", function () {
+  this.timeout(SUITE_TIMEOUT);
+
+  it("reports a capture declined after its 202 as the hold it leaves", async function () {
+    const payment = await Charge(this, { authorizeOnly: true });
+    const captureDeclined = {
+      ...capturedFixture,
+      type: "payment_capture_declined",
+    };
+    const event = assertEvent(
+      await VerifyWebhook(delivery(captureDeclined, { id: payment.id })),
+      "payment.authorized",
+      captureDeclined,
+    );
+    assert.equal(event.payment?.status, "authorized");
+  });
+
+  it("reports a declined void as the hold it leaves", async function () {
+    const payment = await Charge(this, { authorizeOnly: true });
+    const voidDeclined = { ...voidedFixture, type: "payment_void_declined" };
+    const event = assertEvent(
+      await VerifyWebhook(delivery(voidDeclined, { id: payment.id })),
+      "payment.authorized",
+      voidDeclined,
+    );
+    assert.equal(event.payment?.status, "authorized");
+  });
+
+  it("reports a failed authentication as payment.failed", async function () {
+    const method = process.env.ANTELOPE_PAYMENT_TEST_METHOD_DECLINED;
+    if (!method) this.skip();
+    const payment = await Charge(this, { method });
+    const authenticationFailed = {
+      ...declinedFixture,
+      type: "payment_authentication_failed",
+    };
+    const event = assertEvent(
+      await VerifyWebhook(delivery(authenticationFailed, { id: payment.id })),
+      "payment.failed",
+      authenticationFailed,
+    );
+    assert.equal(event.payment?.status, "failed");
+  });
+});
+
 describe("[checkout-com] webhook normalisation from the body alone", function () {
   this.timeout(SUITE_TIMEOUT);
 
@@ -308,7 +353,7 @@ describe("[checkout-com] webhook verification", () => {
   it("resolves undefined for a genuine delivery of a type it does not model, whatever its data holds", async () => {
     for (const raw of [
       '{"id":"evt_1","type":"source_updated","data":{"source_id":"src_1"}}',
-      '{"id":"evt_2","type":"payment_authentication_failed","data":{"id":"pay_1","metadata":{"a":{"b":1}}}}',
+      '{"id":"evt_2","type":"payment_authorization_increment_declined","data":{"id":"pay_1","metadata":{"a":{"b":1}}}}',
       '{"id":"evt_3","type":"card_verified","created_on":null,"data":{"id":"pay_1"}}',
       '{"id":"evt_4","type":"payment_pending_x","data":{"id":"pay_1","amount":"20"}}',
     ]) {
