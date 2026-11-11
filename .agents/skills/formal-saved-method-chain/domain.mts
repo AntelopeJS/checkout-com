@@ -7,6 +7,8 @@ export const RULES = [
   "ChainMatchesRecord",
   "RecordKept",
   "ListMatchesRecord",
+  "ListsOnlyAuthenticated",
+  "ChargesOnlyAuthenticated",
   "NoRecordOutlivesInstrument",
   "Settles",
 ] as const;

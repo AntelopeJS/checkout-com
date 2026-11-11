@@ -42,7 +42,7 @@ Exit 0 means the replace result matches the record in `check.mts`. Exit 1 means 
 - `PATCH /customers/{id}` with `metadata` replaces the whole map. Without `metadata` it keeps the map. There is no ETag, and `If-Match` is ignored.
 - `GET /customers/{id}` always lists `instruments` and reflects a deleted instrument at once.
 - `GET /instruments/{id}` names the instrument's customer when it has one, and answers 404 once the instrument is deleted.
-- A saving payment links its instrument to the customer as soon as Checkout.com takes it, before 3DS.
+- A saving payment sent with a customer links its instrument to that customer as soon as Checkout.com takes it, before 3DS. One sent without a customer, as the module now sends it, leaves the instrument unlinked until a `PATCH /instruments/{id}` links it.
 - A saving payment that needs 3DS answers `202` with a redirect and no `source`. Reads of it show `source: {"type": "card"}` with no id until the payer passes 3DS.
 
 The `merge` semantics is not observed. It models a provider that merges a PATCH into the stored map. The model never refuses a write over 20 pairs, so `MetadataLimit` reports what the module would make Checkout.com hold.
@@ -67,6 +67,8 @@ The `merge` semantics is not observed. It models a provider that merges a PATCH 
 | `ChainMatchesRecord` | An off-session charge sends `previous_payment_id` exactly when the customer read it made held a record for the card, and then sends the recorded payment. | each charge | holds | holds |
 | `RecordKept` | Once a card's record is stored, it names the same payment for as long as the customer has the card. | every step | holds | holds |
 | `ListMatchesRecord` | `ListPaymentMethods` answers the cards its read saw, each with the record's save time or 0. | each list | holds | holds |
+| `ListsOnlyAuthenticated` | `ListPaymentMethods` never answers a card whose saving payment still waits for its payer's 3DS. | each list | holds | not gated |
+| `ChargesOnlyAuthenticated` | No off-session charge uses a card whose saving payment still waits for its payer's 3DS. | each charge | holds | not gated |
 | `NoRecordOutlivesInstrument` | No record names a card the customer no longer has. | quiescence | holds | breaks (9), not gated |
 | `Settles` | Every operation settles once no request is left to answer. | quiescence | holds | holds |
 
@@ -116,6 +118,20 @@ The 715 cards still in 3DS are saves with no `return` for that card. The 187 aut
 ## Findings
 
 `FINDINGS` in `check.mts` is empty: every rule holds under replace, the semantics the sandbox showed, at seed `20261110`.
+
+### Fixed: ListsOnlyAuthenticated and ChargesOnlyAuthenticated, under replace
+
+Both rules came with their fix, and both broke at 5 states on the code before it. A saving payment linked its card to the customer when Checkout.com takes it, before 3DS, because the module sends the customer with it. Until the payer passed 3DS, or for good when they abandoned it, `ListPaymentMethods` offered that card and an off-session charge for the customer used it.
+
+```text
+  1 #0 create: POST /customers -> 201 [16 pairs; records none; cards none]
+  2 #1 save card1: POST /payments -> 202 [16 pairs; records none; cards card1]
+  3 #2 charge card1: GET /customers/cus -> 200 [16 pairs; records none; cards card1]
+  ! ChargesOnlyAuthenticated: #2 charge card1 charged card1 off-session while its saving payment still waits for its payer
+  4 #2 charge card1: POST /payments -> 201 [16 pairs; records none; cards card1]
+```
+
+The list trace is the same up to `#2 list: GET /customers/cus -> 200 [… cards card1]`, which answers `[card1@0]`. The sandbox showed it on 2026-11-10: a saving payment abandoned at 3DS ended `Expired` with its `src_` still linked to the customer. The module now sends a saving payment without its customer, so the card is linked by the record write once the payment carries it, and refuses a customer's off-session charge of a card that customer does not list. The check printed `HOLDS ListsOnlyAuthenticated_replace` and `HOLDS ChargesOnlyAuthenticated_replace` on that change.
 
 ### Fixed: NoRecordOutlivesInstrument, under replace
 

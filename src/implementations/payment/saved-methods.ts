@@ -105,11 +105,12 @@ async function RecordSavedMethod(
   return true;
 }
 
+/** Whether the customer has the card, and the record of the payment that saved it. */
 export async function FindSavedMethod(
   client: CkoClient,
   customerId: string,
   instrument: string,
-): Promise<SavedMethod | undefined> {
+): Promise<{ isListed: boolean; saved: SavedMethod | undefined }> {
   const { body: customer } = await client.send(
     {
       method: "GET",
@@ -117,7 +118,10 @@ export async function FindSavedMethod(
     },
     IsCkoCustomer,
   );
-  return ReadSavedMethod(customer.metadata, instrument);
+  return {
+    isListed: (customer.instruments ?? []).some(({ id }) => id === instrument),
+    saved: ReadSavedMethod(customer.metadata, instrument),
+  };
 }
 
 const recordsInFlight = new Map<string, Promise<unknown>>();

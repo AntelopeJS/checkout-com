@@ -1,4 +1,4 @@
-import { IsCkoActionAccepted, IsCkoPayment } from "./resources";
+import { IsCkoActionAccepted, IsCkoCustomer, IsCkoPayment } from "./resources";
 import type {
   Amount,
   Payment,
@@ -10,7 +10,7 @@ import {
   PaymentError,
 } from "@antelopejs/interface-payment";
 
-import { AssertPaymentId } from "./ids";
+import { AssertCustomerId, AssertPaymentId } from "./ids";
 import type { CkoClient, CkoResponse } from "./http";
 import { type Account, GetAccount } from "./accounts";
 import { TranslateError, Translating } from "./errors";
@@ -84,17 +84,26 @@ function assertConsistent(request: PaymentRequest): void {
   }
 }
 
+/**
+ * The payment that saved the card, for the chain. A customer's off-session
+ * charge must use a card that customer has: a card its payer never
+ * authenticated is linked to no customer, so it is refused here rather than
+ * charged as though the payer had agreed to it.
+ */
 async function initialPaymentOf(
   account: Account,
   request: PaymentRequest,
 ): Promise<string | undefined> {
   if (!request.customer || !request.paymentMethod) return undefined;
-  const saved = await FindSavedMethod(
+  const found = await FindSavedMethod(
     account.client,
     request.customer,
     request.paymentMethod,
   );
-  return saved?.initialPayment;
+  if (!found.isListed) {
+    throw new CustomerNotFoundError(request.paymentMethod, "payment method");
+  }
+  return found.saved?.initialPayment;
 }
 
 /**
@@ -128,6 +137,23 @@ async function initiation(
   return {};
 }
 
+/**
+ * A saving payment is sent without its customer, so Checkout.com no longer
+ * refuses an unknown one; the customer is read first so the payer is never
+ * charged for a save that cannot be recorded.
+ */
+async function assertSavingCustomer(
+  account: Account,
+  request: PaymentRequest,
+): Promise<void> {
+  if (!request.savePaymentMethod || !request.customer) return;
+  AssertCustomerId(request.customer);
+  await account.client.send(
+    { method: "GET", path: `/customers/${request.customer}` },
+    IsCkoCustomer,
+  );
+}
+
 async function buildRequest(
   account: Account,
   request: PaymentRequest,
@@ -144,7 +170,7 @@ async function buildRequest(
   if (request.description) {
     sent.description = request.description;
   }
-  if (request.customer) {
+  if (request.customer && !request.savePaymentMethod) {
     sent.customer = { id: request.customer };
   }
   if (request.returnUrl) {
@@ -162,6 +188,7 @@ export async function CreatePayment(
   assertConsistent(request);
   const account = GetAccount(provider);
   try {
+    await assertSavingCustomer(account, request);
     const sent = await buildRequest(account, request);
     const { body } = await account.client.send(
       {
