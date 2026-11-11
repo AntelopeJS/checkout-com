@@ -17,11 +17,16 @@ const BASE_URL_INVALID = "base_url_invalid";
 /**
  * 422 codes meaning the amount or the payment's balance rules out the action.
  * Checkout.com documents no refund-specific code, but the sandbox refuses an
- * over-refund with `refund_amount_exceeds_balance` (observed 2026-11-10).
+ * over-refund with `refund_amount_exceeds_balance`, and a capture or void of a
+ * payment that is not authorized (waiting for 3DS, captured, declined) with
+ * the `no_balance_available_to_*` codes, not the documented 403 (observed
+ * 2026-11-10).
  */
 const STATE_CODES = new Set([
   "amount_exceeds_balance",
   "refund_amount_exceeds_balance",
+  "no_balance_available_to_capture",
+  "no_balance_available_to_void",
   "capture_value_greater_than_authorized",
   "capture_value_greater_than_remaining_authorized",
   "void_amount_invalid",

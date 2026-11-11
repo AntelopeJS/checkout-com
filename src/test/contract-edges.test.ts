@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  CancelPayment,
   CapturePayment,
   CreateCheckoutSession,
+  CreatePayment,
   CreateCustomer,
   CustomerNotFoundError,
   GetPayment,
@@ -17,6 +19,7 @@ import { isActions } from "./raw";
 import { TEST_CARDS, TEST_WEBHOOK_KEY } from "./constants";
 import capturedFixture from "./standin/fixtures/payment_captured.json";
 import {
+  CardToken,
   Charge,
   ReadRaw,
   RequireStandIn,
@@ -86,6 +89,44 @@ describe("[checkout-com] capturing what Checkout.com captures by itself", functi
       settled.amountCaptured.value,
       settled.amount.value,
       "captured exactly once",
+    );
+  });
+});
+
+describe("[checkout-com] actions on a payment waiting for 3DS", function () {
+  this.timeout(SUITE_TIMEOUT);
+
+  async function waiting(context: Mocha.Context) {
+    const customer = await CreateCustomer({ email: email() }, key());
+    const payment = await CreatePayment(
+      {
+        amount: PARTIAL,
+        reference: reference(),
+        customer: customer.id,
+        paymentMethod: await CardToken(context, TEST_CARDS.challenge),
+        savePaymentMethod: true,
+        authorizeOnly: true,
+        returnUrl: "https://merchant.invalid/return",
+      },
+      key(),
+    );
+    assert.equal(payment.status, "requires_action");
+    return payment.id;
+  }
+
+  it("refuses to cancel it as a state error", async function () {
+    const id = await waiting(this);
+    await assert.rejects(
+      () => CancelPayment(id, key()),
+      InvalidPaymentStateError,
+    );
+  });
+
+  it("refuses to capture it as a state error", async function () {
+    const id = await waiting(this);
+    await assert.rejects(
+      () => CapturePayment(id, key()),
+      InvalidPaymentStateError,
     );
   });
 });
