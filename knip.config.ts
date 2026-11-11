@@ -7,5 +7,7 @@ export default antelopeKnipConfig({
     "test/renewal-probe/index.js",
     ".agents/skills/formal-webhook-acceptance/check.ts",
     ".agents/skills/formal-webhook-acceptance/mutations.ts",
+    ".agents/skills/formal-saved-method-chain/check.mts",
   ],
+  project: [".agents/skills/formal-saved-method-chain/*.mts"],
 });

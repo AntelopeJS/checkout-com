@@ -48,6 +48,21 @@ const config: VerifyConfig = {
       passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
       behaviour: { kind: "emit" },
     },
+    {
+      name: "formal-saved-method-chain",
+      covers: [
+        "src/implementations/payment/saved-methods.ts",
+        "src/implementations/payment/follow.ts",
+        "src/implementations/payment/payments.ts",
+        "src/implementations/payment/customers.ts",
+        "src/implementations/payment/mapping.ts",
+      ],
+      files: [".agents/skills/formal-saved-method-chain/**"],
+      command: ["node", ".agents/skills/formal-saved-method-chain/check.mts"],
+      violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states)?/gm,
+      passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
+      behaviour: { kind: "emit" },
+    },
   ],
   moduleConfig() {
     return {
