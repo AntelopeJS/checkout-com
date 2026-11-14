@@ -9,30 +9,30 @@ importers:
   .:
     dependencies:
       '@antelopejs/interface-core':
-        specifier: '>=0.0.5 <1.0.0'
-        version: 0.4.0
+        specifier: '>=0.5.1 <0.6.0'
+        version: 0.5.1
       '@antelopejs/interface-payment':
-        specifier: '>=0.2.0 <0.3.0'
-        version: 0.2.0(@antelopejs/interface-core@0.4.0)
+        specifier: '>=0.2.1 <0.3.0'
+        version: 0.2.1(@antelopejs/interface-core@0.5.1)
     devDependencies:
       '@antelopejs/core':
-        specifier: ^1.21.0
-        version: 1.21.0
+        specifier: ~1.23.3
+        version: 1.23.3
       '@antelopejs/interface-database':
-        specifier: ^0.2.0
-        version: 0.2.0(@antelopejs/interface-core@0.4.0)
+        specifier: '>=0.4.0 <0.5.0'
+        version: 0.4.0(@antelopejs/interface-core@0.5.1)
       '@antelopejs/interface-subscriptions':
-        specifier: '>=0.1.0 <1.0.0'
-        version: 0.1.0(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-payment@0.2.0(@antelopejs/interface-core@0.4.0))
+        specifier: '>=0.1.2 <0.2.0'
+        version: 0.1.2(@antelopejs/interface-core@0.5.1)(@antelopejs/interface-payment@0.2.1(@antelopejs/interface-core@0.5.1))
       '@antelopejs/mongodb':
-        specifier: ^1.6.0
-        version: 1.6.0(socks@2.8.10)
+        specifier: ~1.8.1
+        version: 1.8.1(socks@2.8.10)
       '@antelopejs/payment-subscriptions':
-        specifier: 0.0.3
-        version: 0.0.3
+        specifier: '>=0.0.6 <0.1.0'
+        version: 0.0.6
       '@antelopejs/tooling-configs':
-        specifier: ^0.5.8
-        version: 0.5.8(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))
+        specifier: '>=0.7.1 <0.8.0'
+        version: 0.7.1(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
@@ -81,57 +81,57 @@ importers:
 
 packages:
 
-  '@antelopejs/core@1.21.0':
-    resolution: {integrity: sha512-0+qxASgc1sF8MihvGYfrAy6m3XTPcrFJeeIH69ivI0cvtYmj71cjzTeXdKghBZb4ndTMQ2IXeKbK6zxrG2w4Tw==}
+  '@antelopejs/core@1.23.3':
+    resolution: {integrity: sha512-W9ekdNXaZCuK4lsKn5bBF3F+LoQhvwlmLoprw4m0W6jdS0DA6Bb7B2+2ttgla0oggAJwyFUxHcpBVloFnlv91w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  '@antelopejs/interface-core@0.4.0':
-    resolution: {integrity: sha512-IPX6dtt3KHknclN4mLOYeRYL2Odz1Pts+dtaZul62NghsBUX/0OFHD4Qhoaf+Beva4hjInbaF918ajr4Z5HVWQ==}
+  '@antelopejs/interface-core@0.5.1':
+    resolution: {integrity: sha512-ON/7TYA1yyT8UznzKi6vnwyjRU3byNE0OcFXBmf8dE/dqp8hKjeWHVyA2EUPOngmEimCLw4idZqOS5DJqMJx3g==}
 
   '@antelopejs/interface-database-catalog@0.0.3':
     resolution: {integrity: sha512-ZT7bZ0ycEs8VvEgNGQTGMAzKiFQC1BOYOM2f2e+vFuCN/1VPBZZFxg3XOmHClTzdW/RzX2k7lasfMyaVOUzOCA==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-database@0.2.0':
-    resolution: {integrity: sha512-ls+z8LNsoE01YzFZLEIvrhF/LHFVrntlfxZm30cVnT4Rcm5NsdCBxthHJNjkLdYRB3Ex71IFWSa1Q6O8oRDZ+A==}
+  '@antelopejs/interface-database@0.4.0':
+    resolution: {integrity: sha512-cdVGd0qdHwkS3PHdbV9IJUyL3OoGjnmXoVbXdHPNmbwzmjUDkZQHFN2Y3b58SGsH11k3nS1EJLq0sTbKVhaKdQ==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-mongodb@0.0.6':
-    resolution: {integrity: sha512-jNb6fVIMQFFTkUnaY4KrSdA5JknmUCpnjIMC6/GuN8wEoUbo/LBZGq7q1Kz1IGcNpiByRbWHvDVW9J693i1kFw==}
+  '@antelopejs/interface-mongodb@0.0.8':
+    resolution: {integrity: sha512-sAJDFv29Zz2RFZaSvN/qIPW57/zpYFVHaOTaBi2dgDn650Z0hpD9gJx9LVp5NiCC3EmD+DeQggmA5ada+4zatA==}
 
-  '@antelopejs/interface-payment@0.2.0':
-    resolution: {integrity: sha512-HvwSFYdvDxh6EfXgwJ09cd5B4qbrIM4N2DLJbPg4ZeerMPL5PT0srRc2JYIGwJIa2X24SOW9jALE8sCO96vnxg==}
+  '@antelopejs/interface-payment@0.2.1':
+    resolution: {integrity: sha512-a9QoMXleHHoMLRI4uENOMM8eD7Uaxl6txVMxOhznvOuuYahjjPCfql694Bqda14dpoIokD3/pZZ3O2KRXa0aJA==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.3 <1.0.0'
 
-  '@antelopejs/interface-redis-scheduler@0.0.9':
-    resolution: {integrity: sha512-cjMgKmJFrjzo0ZcA+08tiPH+KrAWRJQr2f+k51srbf7pApPcPgW7y96N53OKdxadD9FZw+UxYJIJcFM1nw8CBw==}
+  '@antelopejs/interface-redis-scheduler@0.0.12':
+    resolution: {integrity: sha512-c+KL+5vV/xAP8echDBDMqX8p+6QIvJhQNDgWAz9lnvAJK5XpXX7LwcIQcP6rqwiZENcELDlquKsT5UKaIdXL0w==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
       '@antelopejs/interface-redis': '>=0.0.9 <1.0.0'
 
-  '@antelopejs/interface-redis@0.0.9':
-    resolution: {integrity: sha512-lI1zcm2J13tP4D/QKmsdKFBRIzjZ/GdG4z27uaOp/3yKPA3RkH5YgpzFm9pgBa353UIhgZDuVkozFJcFkqewUA==}
+  '@antelopejs/interface-redis@0.0.10':
+    resolution: {integrity: sha512-yC8mgJXlCzyFy+4EWt2ZuKqVcrwX+Jm6A5BR0XHtDkmT+njsew7Y7i/LUnfr+BZxf7bvx5Ds5nY0Elkdu1bxUg==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.2.4 <1.0.0'
 
-  '@antelopejs/interface-subscriptions@0.1.0':
-    resolution: {integrity: sha512-FFFZrg5eG6Gflv77Dw1LU696uVC6gyJC11FnjPv1y4GU9fXLLe4MBFP0I83hJKHN1jq+ytBdAxSAa7B/aV4ptQ==}
+  '@antelopejs/interface-subscriptions@0.1.2':
+    resolution: {integrity: sha512-XSMGyo5Y/WWcIRjU8vuDD8zAL/5RlbXeAvWwCCO0lUZBBUPNw9WknuAJ0ySQWiKCty6Go3SRosc724p3eSa99Q==}
     peerDependencies:
       '@antelopejs/interface-core': '>=0.0.5 <1.0.0'
       '@antelopejs/interface-payment': '>=0.0.2 <1.0.0'
 
-  '@antelopejs/mongodb@1.6.0':
-    resolution: {integrity: sha512-HKPw1FC+NDqHe0B7ceEUGpbH8oOg9AcdEhcBjSnBwrmf0Z0hWwn2T95p0hEcW3TunaFRoueAJsQjSdUqdckSFA==}
+  '@antelopejs/mongodb@1.8.1':
+    resolution: {integrity: sha512-t+ycKbo+ApDw05+sPZzKel20JLY+dcxiZjOZmr2irJnC9oQXizIBhoXrePtej4de1qPmWWZ74OHPZKNTjbnd3w==}
 
-  '@antelopejs/payment-subscriptions@0.0.3':
-    resolution: {integrity: sha512-Jr0RtAAHJVyGBG0aaBKNBL06va4LccdGb3zcWmgDqmjjd8fzLaqxE9+vv2WiCnp3En3OWQO6r3jGydn86TcTHg==}
+  '@antelopejs/payment-subscriptions@0.0.6':
+    resolution: {integrity: sha512-grMMt3J0S26WIAdBxnc6daAbKdDZK8tnHHY4ol854Ol00OUEOcBWCLkVY3pCa2Lze0+5vZe8kaMl6OKolR6dgA==}
 
-  '@antelopejs/tooling-configs@0.5.8':
-    resolution: {integrity: sha512-F4q6E2HWXEF0f6MHHOCQGheRzaNkX4e8JeYI92x6KajWJIkk8HroThU8jmIaP7Q23w6fIv8fveHtyc7pJ2hQHg==}
+  '@antelopejs/tooling-configs@0.7.1':
+    resolution: {integrity: sha512-X/mr/nQEgmFI2dMr3ThMS7HcPaU1amsTU/RNfEnQv46+l7au8cv7unpypCZ0BggnfJHjpk2QG2CTOOllpwj3cw==}
     engines: {node: '>=22.18.0'}
     hasBin: true
     peerDependencies:
@@ -1019,6 +1019,10 @@ packages:
   '@typescript-eslint/visitor-keys@8.71.0':
     resolution: {integrity: sha512-8eQ9R218XORK+KLosnf4bu/QsUXvUyVwTbArg7/0NMB1Pu87OJKvj4nhFblkYE8gQV73mW1dx1ptlPCkwRGa7A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript/typescript6@6.0.2':
+    resolution: {integrity: sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==}
+    hasBin: true
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -2672,6 +2676,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   ufo@1.6.4:
     resolution: {integrity: sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA==}
 
@@ -2804,9 +2813,9 @@ packages:
 
 snapshots:
 
-  '@antelopejs/core@1.21.0':
+  '@antelopejs/core@1.23.3':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
+      '@antelopejs/interface-core': 0.5.1
       '@clack/prompts': 1.8.1
       '@types/proper-lockfile': 4.1.4
       commander: 13.1.0
@@ -2819,19 +2828,19 @@ snapshots:
       semver: 7.8.5
       typescript: 5.9.3
 
-  '@antelopejs/interface-core@0.4.0':
+  '@antelopejs/interface-core@0.5.1':
     dependencies:
       reflect-metadata: 0.2.2
 
-  '@antelopejs/interface-database-catalog@0.0.3(@antelopejs/interface-core@0.4.0)':
+  '@antelopejs/interface-database-catalog@0.0.3(@antelopejs/interface-core@0.5.1)':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
+      '@antelopejs/interface-core': 0.5.1
 
-  '@antelopejs/interface-database@0.2.0(@antelopejs/interface-core@0.4.0)':
+  '@antelopejs/interface-database@0.4.0(@antelopejs/interface-core@0.5.1)':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
+      '@antelopejs/interface-core': 0.5.1
 
-  '@antelopejs/interface-mongodb@0.0.6(socks@2.8.10)':
+  '@antelopejs/interface-mongodb@0.0.8(socks@2.8.10)':
     dependencies:
       mongodb: 6.21.0(socks@2.8.10)
     transitivePeerDependencies:
@@ -2844,44 +2853,44 @@ snapshots:
       - socks
     optional: true
 
-  '@antelopejs/interface-payment@0.2.0(@antelopejs/interface-core@0.4.0)':
+  '@antelopejs/interface-payment@0.2.1(@antelopejs/interface-core@0.5.1)':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
+      '@antelopejs/interface-core': 0.5.1
 
-  '@antelopejs/interface-redis-scheduler@0.0.9(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.4.0))':
+  '@antelopejs/interface-redis-scheduler@0.0.12(@antelopejs/interface-core@0.5.1)(@antelopejs/interface-redis@0.0.10(@antelopejs/interface-core@0.5.1))':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
-      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.4.0)
+      '@antelopejs/interface-core': 0.5.1
+      '@antelopejs/interface-redis': 0.0.10(@antelopejs/interface-core@0.5.1)
       ioredis: 5.11.1
     transitivePeerDependencies:
       - supports-color
     optional: true
 
-  '@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.4.0)':
+  '@antelopejs/interface-redis@0.0.10(@antelopejs/interface-core@0.5.1)':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
+      '@antelopejs/interface-core': 0.5.1
       ioredis: 5.11.1
     transitivePeerDependencies:
       - supports-color
     optional: true
 
-  '@antelopejs/interface-subscriptions@0.1.0(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-payment@0.2.0(@antelopejs/interface-core@0.4.0))':
+  '@antelopejs/interface-subscriptions@0.1.2(@antelopejs/interface-core@0.5.1)(@antelopejs/interface-payment@0.2.1(@antelopejs/interface-core@0.5.1))':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
-      '@antelopejs/interface-payment': 0.2.0(@antelopejs/interface-core@0.4.0)
+      '@antelopejs/interface-core': 0.5.1
+      '@antelopejs/interface-payment': 0.2.1(@antelopejs/interface-core@0.5.1)
 
-  '@antelopejs/mongodb@1.6.0(socks@2.8.10)':
+  '@antelopejs/mongodb@1.8.1(socks@2.8.10)':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
-      '@antelopejs/interface-database': 0.2.0(@antelopejs/interface-core@0.4.0)
-      '@antelopejs/interface-database-catalog': 0.0.3(@antelopejs/interface-core@0.4.0)
+      '@antelopejs/interface-core': 0.5.1
+      '@antelopejs/interface-database': 0.4.0(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-database-catalog': 0.0.3(@antelopejs/interface-core@0.5.1)
       chai: 4.5.0
       mongodb: 6.21.0(socks@2.8.10)
       randomstring: 1.3.2
       reflect-metadata: 0.2.2
       uuid: 11.1.1
     optionalDependencies:
-      '@antelopejs/interface-mongodb': 0.0.6(socks@2.8.10)
+      '@antelopejs/interface-mongodb': 0.0.8(socks@2.8.10)
     transitivePeerDependencies:
       - '@aws-sdk/credential-providers'
       - '@mongodb-js/zstd'
@@ -2891,24 +2900,25 @@ snapshots:
       - snappy
       - socks
 
-  '@antelopejs/payment-subscriptions@0.0.3':
+  '@antelopejs/payment-subscriptions@0.0.6':
     dependencies:
-      '@antelopejs/interface-core': 0.4.0
-      '@antelopejs/interface-database': 0.2.0(@antelopejs/interface-core@0.4.0)
-      '@antelopejs/interface-payment': 0.2.0(@antelopejs/interface-core@0.4.0)
-      '@antelopejs/interface-subscriptions': 0.1.0(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-payment@0.2.0(@antelopejs/interface-core@0.4.0))
+      '@antelopejs/interface-core': 0.5.1
+      '@antelopejs/interface-database': 0.4.0(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-payment': 0.2.1(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-subscriptions': 0.1.2(@antelopejs/interface-core@0.5.1)(@antelopejs/interface-payment@0.2.1(@antelopejs/interface-core@0.5.1))
     optionalDependencies:
-      '@antelopejs/interface-redis': 0.0.9(@antelopejs/interface-core@0.4.0)
-      '@antelopejs/interface-redis-scheduler': 0.0.9(@antelopejs/interface-core@0.4.0)(@antelopejs/interface-redis@0.0.9(@antelopejs/interface-core@0.4.0))
+      '@antelopejs/interface-redis': 0.0.10(@antelopejs/interface-core@0.5.1)
+      '@antelopejs/interface-redis-scheduler': 0.0.12(@antelopejs/interface-core@0.5.1)(@antelopejs/interface-redis@0.0.10(@antelopejs/interface-core@0.5.1))
     transitivePeerDependencies:
       - supports-color
 
-  '@antelopejs/tooling-configs@0.5.8(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))':
+  '@antelopejs/tooling-configs@0.7.1(eslint-plugin-perfectionist@5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(knip@6.39.0)(oxfmt@0.66.0)(oxlint@1.81.0(oxlint-tsgolint@7.0.2003))':
     dependencies:
       '@oxlint/plugins': 1.81.0
+      '@typescript/typescript6': 6.0.2
       dts-bundle-generator: 9.5.1
       minimatch: 10.2.6
-      typescript: 5.9.3
+      semver: 7.8.5
       yaml: 2.9.1
     optionalDependencies:
       eslint-plugin-perfectionist: 5.12.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
@@ -3581,6 +3591,10 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.71.0
       eslint-visitor-keys: 5.0.1
+
+  '@typescript/typescript6@6.0.2':
+    dependencies:
+      '@typescript/old': typescript@6.0.3
 
   acorn-jsx@5.3.2(acorn@8.19.0):
     dependencies:
@@ -5359,6 +5373,8 @@ snapshots:
   type-fest@2.19.0: {}
 
   typescript@5.9.3: {}
+
+  typescript@6.0.3: {}
 
   ufo@1.6.4: {}
 
