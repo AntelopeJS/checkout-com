@@ -46,7 +46,6 @@ const config: VerifyConfig = {
       files: [".agents/skills/formal-webhook-acceptance/**"],
       command: ["node", ".agents/skills/formal-webhook-acceptance/check.ts"],
       violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states\))?/gm,
-      passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
       behaviour: { kind: "emit" },
     },
     {
@@ -61,7 +60,6 @@ const config: VerifyConfig = {
       files: [".agents/skills/formal-saved-method-chain/**"],
       command: ["node", ".agents/skills/formal-saved-method-chain/check.mts"],
       violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states)?/gm,
-      passing: /(?<=^holds +(?:\w+, )*)(\w+)(?=,| \()/gm,
       behaviour: { kind: "emit" },
     },
   ],
