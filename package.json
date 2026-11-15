@@ -49,10 +49,10 @@
     "@antelopejs/interface-payment": ">=0.2.1 <0.3.0"
   },
   "devDependencies": {
-    "@antelopejs/core": "~1.23.3",
-    "@antelopejs/interface-database": ">=0.4.0 <0.5.0",
+    "@antelopejs/core": "~1.24.0",
+    "@antelopejs/interface-database": ">=0.4.1 <0.5.0",
     "@antelopejs/interface-subscriptions": ">=0.1.2 <0.2.0",
-    "@antelopejs/mongodb": "~1.8.1",
+    "@antelopejs/mongodb": "~1.8.4",
     "@antelopejs/payment-subscriptions": ">=0.0.6 <0.1.0",
     "@antelopejs/tooling-configs": ">=0.7.1 <0.8.0",
     "@types/mocha": "^10.0.10",
