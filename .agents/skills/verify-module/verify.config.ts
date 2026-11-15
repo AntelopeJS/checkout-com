@@ -46,7 +46,6 @@ const config: VerifyConfig = {
       files: [".agents/skills/formal-webhook-acceptance/**"],
       command: ["node", ".agents/skills/formal-webhook-acceptance/check.ts"],
       violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states\))?/gm,
-      behaviour: { kind: "emit" },
     },
     {
       name: "formal-saved-method-chain",
@@ -60,7 +59,6 @@ const config: VerifyConfig = {
       files: [".agents/skills/formal-saved-method-chain/**"],
       command: ["node", ".agents/skills/formal-saved-method-chain/check.mts"],
       violation: /^(?:finding|BROKEN|CHANGED|HOLDS) +(\w+)(?: \((?<states>\d+) states)?/gm,
-      behaviour: { kind: "emit" },
     },
   ],
   saas: { env: SANDBOX_KEYS, sandbox: "Checkout.com sandbox (merchant-specific base URL)" },
