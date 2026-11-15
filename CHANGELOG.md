@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.1
+
+[compare changes](https://github.com/AntelopeJS/checkout-com/compare/v0.1.0...v0.1.1)
+
+### 📖 Documentation
+
+- **readme:** Adopt the AntelopeJS framework README style ([#59](https://github.com/AntelopeJS/checkout-com/pull/59))
+
+### 📦 Build
+
+- **deps:** Move to tooling-configs 0.7.1 and cap @antelopejs ranges below the next minor ([#61](https://github.com/AntelopeJS/checkout-com/pull/61))
+- **deps:** Move to core 1.24.0, mongodb 1.8.4 and interface-database 0.4.1 ([#62](https://github.com/AntelopeJS/checkout-com/pull/62))
+- Move to @antelopejs/tooling-configs 0.8 and the three-tier CI ([#63](https://github.com/AntelopeJS/checkout-com/pull/63))
+
+### 🤖 CI
+
+- Run the checks on Windows beside Linux ([#60](https://github.com/AntelopeJS/checkout-com/pull/60))
+
+#### ⚠️ Breaking Changes
+
+- **deps:** Move to tooling-configs 0.7.1 and cap @antelopejs ranges below the next minor ([#61](https://github.com/AntelopeJS/checkout-com/pull/61))
+
+### ❤️ Contributors
+
+- Antony Rizzitelli
+
 ## v0.1.0
 
 
