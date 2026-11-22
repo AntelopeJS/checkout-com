@@ -54,7 +54,7 @@
     "@antelopejs/interface-subscriptions": ">=0.1.2 <0.2.0",
     "@antelopejs/mongodb": "~1.8.4",
     "@antelopejs/payment-subscriptions": ">=0.0.6 <0.1.0",
-    "@antelopejs/tooling-configs": ">=0.9.3 <0.10.0",
+    "@antelopejs/tooling-configs": ">=0.9.4 <0.10.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.19.15",
     "@types/semver": "^7.8.0",
