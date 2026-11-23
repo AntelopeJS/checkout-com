@@ -232,8 +232,10 @@ async function drive(
 
 let runs = 0;
 
-/** Runs `scenario` against the module with `semantics` for PATCH; the returned provider holds what broke. */
 /**
+ * Runs `scenario` against the module with `semantics` for PATCH; the returned
+ * provider holds what broke.
+ *
  * One generated run: a customer created with caller metadata, then saving
  * payments and the operations that follow them, all started at once. Every
  * request, every operation start and every 3DS step of the payer is a task of
