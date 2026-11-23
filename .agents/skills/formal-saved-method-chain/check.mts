@@ -251,7 +251,7 @@ function report(results: Result[]): number {
  * It loads `src/` of the checkout it runs from, transpiled as it is imported,
  * so a base worktree with no build checks its own code. Prints one `holds`
  * line, then one line per broken rule. Exits 0 when every rule matches the
- * record below, 1 when a rule changed, and 2 when the check itself could not
+ * `FINDINGS`, 1 when a rule changed, and 2 when the check itself could not
  * run.
  */
 async function main(): Promise<number> {

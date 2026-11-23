@@ -1,6 +1,6 @@
 import { type Body, type JsonObject, type Metadata, IsText } from "./wire.mts";
 
-/** The domain the model and the scenarios share: rules, operations, requests and the saved-method records. */
+/** The names of the rules the check holds the module to, each its own property: `Rule` is their union. */
 export const RULES = [
   "MetadataLimit",
   "CallerKeysKept",
