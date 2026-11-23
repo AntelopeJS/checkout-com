@@ -1,18 +1,3 @@
-/**
- * Checks the saved-method chain of @antelopejs/checkout-com with fast-check:
- * the module's own CreateCustomer, CreatePayment, GetPayment,
- * ListPaymentMethods and DetachPaymentMethod run against the in-memory
- * Checkout.com of provider.mts, every request delivered through a fast-check
- * scheduler, once with PATCH replacing the customer's metadata and once with
- * it merging. Each rule of each semantics is its own property, so each broken
- * rule shrinks to its own counterexample.
- *
- * It loads `src/` of the checkout it runs from, transpiled as it is imported,
- * so a base worktree with no build checks its own code. Prints one `holds`
- * line, then one line per broken rule. Exits 0 when every rule matches the
- * record below, 1 when a rule changed, and 2 when the check itself could not
- * run.
- */
 import { readFileSync } from "node:fs";
 import { registerHooks } from "node:module";
 import path from "node:path";
@@ -254,6 +239,21 @@ function report(results: Result[]): number {
   return isChanged ? EXIT.changed : EXIT.ok;
 }
 
+/**
+ * Checks the saved-method chain of @antelopejs/checkout-com with fast-check:
+ * the module's own CreateCustomer, CreatePayment, GetPayment,
+ * ListPaymentMethods and DetachPaymentMethod run against the in-memory
+ * Checkout.com of provider.mts, every request delivered through a fast-check
+ * scheduler, once with PATCH replacing the customer's metadata and once with
+ * it merging. Each rule of each semantics is its own property, so each broken
+ * rule shrinks to its own counterexample.
+ *
+ * It loads `src/` of the checkout it runs from, transpiled as it is imported,
+ * so a base worktree with no build checks its own code. Prints one `holds`
+ * line, then one line per broken rule. Exits 0 when every rule matches the
+ * record below, 1 when a rule changed, and 2 when the check itself could not
+ * run.
+ */
 async function main(): Promise<number> {
   if (process.argv.length > 2) {
     console.error("usage: node check.mts");

@@ -1,6 +1,6 @@
-/** The domain the model and the scenarios share: rules, operations, requests and the saved-method records. */
 import { type Body, type JsonObject, type Metadata, IsText } from "./wire.mts";
 
+/** The domain the model and the scenarios share: rules, operations, requests and the saved-method records. */
 export const RULES = [
   "MetadataLimit",
   "CallerKeysKept",

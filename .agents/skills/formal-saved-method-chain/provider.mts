@@ -1,11 +1,3 @@
-/**
- * An in-memory Checkout.com holding one customer: the endpoints the
- * saved-method chain calls, answered one request per scheduler step. A PATCH
- * of the customer's metadata either replaces the whole map, as the sandbox
- * does, or merges into it. After every step it checks the rules that must
- * hold at every step. It never refuses a write over the 20-pair limit, so
- * `MetadataLimit` sees what the module would make Checkout.com hold.
- */
 import {
   type Coverage,
   type Flow,
@@ -109,6 +101,14 @@ const ROUTES: readonly Route[] = [
   },
 ];
 
+/**
+ * An in-memory Checkout.com holding one customer: the endpoints the
+ * saved-method chain calls, answered one request per scheduler step. A PATCH
+ * of the customer's metadata either replaces the whole map, as the sandbox
+ * does, or merges into it. After every step it checks the rules that must
+ * hold at every step. It never refuses a write over the 20-pair limit, so
+ * `MetadataLimit` sees what the module would make Checkout.com hold.
+ */
 export class Provider {
   readonly customerId: string;
   readonly cards: Card[] = [];
