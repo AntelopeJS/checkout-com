@@ -4,14 +4,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-/**
- * Proves the check can fail: each mutant is a scratch copy of signature.ts
- * with one edit, run through check.ts by `WEBHOOK_SIGNATURE_SOURCE`. Prints
- * the mutants the check did not catch and exits 1 when there are any; with
- * `--table` it prints one line per mutant with the rules it broke. Exits 2
- * when an edit no longer applies to the source or the check cannot run.
- */
-
 interface Mutant {
   name: string;
   from: string;

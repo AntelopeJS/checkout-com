@@ -5,16 +5,6 @@ import { observations } from "./observations.ts";
 import { expectation, type Facts, hmacSha256Hex } from "./oracle.ts";
 import { outcomeOf, RULES, type Rule, type RuleName } from "./rules.ts";
 
-/**
- * Checks the webhook acceptance predicate `AssertGenuine` against an oracle
- * written from the contract in docs/4.webhooks.md, over generated deliveries.
- * Prints one `holds` line for the rules that hold and one `finding`, `BROKEN`,
- * `CHANGED` or `HOLDS` line for each rule that does not match the record
- * below. Exits 0 when every rule matches the record, 1 when a rule changed and
- * 2 when the check could not run. `--report` also prints the generated
- * coverage and the module's behaviour where the contract names no answer.
- */
-
 const SEED = Number(process.env.FC_SEED ?? 20261110);
 const RUNS = 4000;
 const MIN_DOMAIN = 150;
