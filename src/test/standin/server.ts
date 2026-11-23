@@ -130,13 +130,14 @@ export class StandInServer {
   }
 
   async start(): Promise<string> {
-    this.server = createServer((request, response) => {
+    const server = createServer((request, response) => {
       void this.dispatch(request, response);
     });
+    this.server = server;
     await new Promise<void>((resolve) =>
-      this.server!.listen(0, "127.0.0.1", resolve),
+      server.listen(0, "127.0.0.1", resolve),
     );
-    const address = this.server.address();
+    const address = server.address();
     if (!isAddressInfo(address)) {
       throw new Error("The stand-in is not listening on a TCP port");
     }

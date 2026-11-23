@@ -1,9 +1,3 @@
-/**
- * One generated run: a customer created with caller metadata, then saving
- * payments and the operations that follow them, all started at once. Every
- * request, every operation start and every 3DS step of the payer is a task of
- * a fast-check scheduler, so the scheduler picks their interleaving.
- */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { setImmediate as nextTurn } from "node:timers/promises";
 import fc, { type Arbitrary, type Scheduler } from "fast-check";
@@ -239,6 +233,12 @@ async function drive(
 let runs = 0;
 
 /** Runs `scenario` against the module with `semantics` for PATCH; the returned provider holds what broke. */
+/**
+ * One generated run: a customer created with caller metadata, then saving
+ * payments and the operations that follow them, all started at once. Every
+ * request, every operation start and every 3DS step of the payer is a task of
+ * a fast-check scheduler, so the scheduler picks their interleaving.
+ */
 export async function RunScenario(
   module: Chain,
   scenario: Scenario,
