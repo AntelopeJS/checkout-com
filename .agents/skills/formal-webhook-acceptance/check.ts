@@ -10,7 +10,7 @@ const RUNS = 4000;
 const MIN_DOMAIN = 150;
 const RFC_4231_CASE_2 = "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843";
 
-/** Rules main breaks, each with the shrink steps to its counterexample. Every other rule holds. */
+/** Rules the module breaks, each with the shrink steps to its counterexample. Every other rule holds. */
 const FINDINGS: Partial<Record<RuleName, number>> = {};
 
 interface Judgement {

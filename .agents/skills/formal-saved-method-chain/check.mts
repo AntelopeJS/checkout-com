@@ -45,8 +45,10 @@ interface Result {
 }
 
 /**
- * Transpiles each file under `src/` as it is loaded, with the repository's
- * compiler options, and resolves its extensionless relative imports to `.ts`.
+ * Transpiles each file under `src/` of the checkout it runs from as it is
+ * loaded, with the repository's compiler options, and resolves its
+ * extensionless relative imports to `.ts`, so a base worktree with no build
+ * checks its own code.
  */
 function transpileSources(): void {
   const parsed = ts.getParsedCommandLineOfConfigFile(
@@ -248,11 +250,9 @@ function report(results: Result[]): number {
  * it merging. Each rule of each semantics is its own property, so each broken
  * rule shrinks to its own counterexample.
  *
- * It loads `src/` of the checkout it runs from, transpiled as it is imported,
- * so a base worktree with no build checks its own code. Prints one `holds`
- * line, then one line per broken rule. Exits 0 when every rule matches the
- * `FINDINGS`, 1 when a rule changed, and 2 when the check itself could not
- * run.
+ * Prints the output SKILL.md lists, in its order. Exits 0 when every rule
+ * matches the `FINDINGS`, 1 when a rule changed, and 2 when the check itself
+ * could not run.
  */
 async function main(): Promise<number> {
   if (process.argv.length > 2) {
