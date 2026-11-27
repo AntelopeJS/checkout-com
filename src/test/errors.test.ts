@@ -23,6 +23,7 @@ import {
   WaitFor,
   key,
   reference,
+  IsKind,
 } from "./support";
 
 const ACTION_CONTEXT = { entity: "payment" as const, forbiddenIsState: true };
@@ -43,19 +44,19 @@ function assertRetryable(
   cause: unknown,
   label: string,
 ): asserts cause is PaymentError {
-  assert.ok(cause instanceof PaymentError, `${label} must stay a PaymentError`);
+  assert.ok(IsKind(cause, PaymentError), `${label} must stay a PaymentError`);
   assert.equal(
-    cause instanceof InvalidPaymentStateError,
+    IsKind(cause, InvalidPaymentStateError),
     false,
     `${label} is not a refusal`,
   );
   assert.equal(
-    cause instanceof PaymentNotFoundError,
+    IsKind(cause, PaymentNotFoundError),
     false,
     `${label} is not a not-found`,
   );
   assert.equal(
-    cause instanceof CustomerNotFoundError,
+    IsKind(cause, CustomerNotFoundError),
     false,
     `${label} is not a not-found`,
   );
@@ -100,7 +101,7 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
 
   it("reads a bodiless 403 on an action as the payment's state", () => {
     const translated = TranslateError(apiError(403), "pay_x", ACTION_CONTEXT);
-    assert.ok(translated instanceof InvalidPaymentStateError);
+    assert.ok(IsKind(translated, InvalidPaymentStateError));
   });
 
   it("does not read a 403 elsewhere as the payment's state", () => {
@@ -116,8 +117,8 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
       "pay_x",
       ACTION_CONTEXT,
     );
-    assert.ok(translated instanceof PaymentError);
-    assert.equal(translated instanceof InvalidPaymentStateError, false);
+    assert.ok(IsKind(translated, PaymentError));
+    assert.equal(IsKind(translated, InvalidPaymentStateError), false);
     assert.equal(translated.providerCode, "base_url_invalid");
     assert.match(translated.message, /baseUrl/);
   });
@@ -128,14 +129,14 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
       "pay_x",
       ACTION_CONTEXT,
     );
-    assert.ok(state instanceof InvalidPaymentStateError);
+    assert.ok(IsKind(state, InvalidPaymentStateError));
     assert.equal(state.providerCode, "amount_exceeds_balance");
     const overRefund = TranslateError(
       apiError(422, ["refund_amount_exceeds_balance"]),
       "pay_x",
       ACTION_CONTEXT,
     );
-    assert.ok(overRefund instanceof InvalidPaymentStateError);
+    assert.ok(IsKind(overRefund, InvalidPaymentStateError));
     const malformed = TranslateError(
       apiError(422, ["currency_invalid"]),
       "pay_x",
@@ -151,13 +152,13 @@ describe("[checkout-com] translating Checkout.com's answers", () => {
       "cus_x",
       ACTION_CONTEXT,
     );
-    assert.ok(customer instanceof CustomerNotFoundError);
+    assert.ok(IsKind(customer, CustomerNotFoundError));
     const method = TranslateError(
       apiError(422, ["source_id_unknown"]),
       "src_x",
       ACTION_CONTEXT,
     );
-    assert.ok(method instanceof CustomerNotFoundError);
+    assert.ok(IsKind(method, CustomerNotFoundError));
   });
 });
 

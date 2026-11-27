@@ -19,6 +19,7 @@ import {
   email,
   key,
   reference,
+  IsKind,
 } from "./support";
 
 const EPOCH_MILLIS_FLOOR = Date.UTC(2020, 0, 1);
@@ -66,7 +67,7 @@ describe("[checkout-com] hosted checkout", function () {
     await assert.rejects(
       () => CreateCheckoutSession(session(), key(), "secondary"),
       (cause: unknown) =>
-        cause instanceof PaymentError &&
+        IsKind(cause, PaymentError) &&
         /checkoutBillingCountry/.test(cause.message),
     );
   });
