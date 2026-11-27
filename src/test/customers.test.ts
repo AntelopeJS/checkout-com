@@ -9,7 +9,7 @@ import {
 
 import { CurrentStandIn } from "./standin";
 import { isCustomer } from "./raw";
-import { ReadRaw, SUITE_TIMEOUT, email, key } from "./support";
+import { IsKind, ReadRaw, SUITE_TIMEOUT, email, key } from "./support";
 
 describe("[checkout-com] customers", function () {
   this.timeout(SUITE_TIMEOUT);
@@ -21,7 +21,7 @@ describe("[checkout-com] customers", function () {
     const error = await CreateCustomer({ name: "No Email" }, key()).catch(
       (cause: unknown) => cause,
     );
-    assert.ok(error instanceof PaymentError);
+    assert.ok(IsKind(error, PaymentError));
     assert.equal(error.providerCode, "email_required");
     const after = CurrentStandIn()?.calls.filter(
       ({ path }) => path === "/customers",
@@ -64,7 +64,7 @@ describe("[checkout-com] customers", function () {
     const error = await CreateCustomer({ email: address }, key()).catch(
       (cause: unknown) => cause,
     );
-    assert.ok(error instanceof PaymentError);
+    assert.ok(IsKind(error, PaymentError));
     assert.equal(error.providerCode, "customer_email_already_exists");
   });
 

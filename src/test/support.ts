@@ -181,3 +181,25 @@ export async function PassAuthentication(
     `payment ${payment.id} is past 3DS`,
   );
 }
+
+/**
+ * Whether `cause` was built by `kind` or a subclass of it, matched by class
+ * name along the prototype chain so a copy of the interface package loaded
+ * twice still matches.
+ */
+export function IsKind<T extends Error>(
+  cause: unknown,
+  kind: abstract new (...args: never[]) => T,
+): cause is T {
+  for (
+    let proto: unknown = cause;
+    typeof proto === "object" && proto !== null;
+    proto = Object.getPrototypeOf(proto)
+  ) {
+    const own = Object.getOwnPropertyDescriptor(proto, "constructor");
+    if (typeof own?.value === "function" && own.value.name === kind.name) {
+      return true;
+    }
+  }
+  return false;
+}

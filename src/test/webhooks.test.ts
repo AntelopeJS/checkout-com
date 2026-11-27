@@ -14,7 +14,7 @@ import {
 import { ParseRefundId } from "../implementations/payment/ids";
 import voidedFixture from "./standin/fixtures/payment_voided.json";
 import disputeFixture from "./standin/fixtures/dispute_received.json";
-import { Charge, SUITE_TIMEOUT, Settled, Sign, key } from "./support";
+import { Charge, IsKind, SUITE_TIMEOUT, Settled, Sign, key } from "./support";
 import approvedFixture from "./standin/fixtures/payment_approved.json";
 import capturedFixture from "./standin/fixtures/payment_captured.json";
 import declinedFixture from "./standin/fixtures/payment_declined.json";
@@ -346,8 +346,8 @@ describe("[checkout-com] webhook verification", () => {
     const error = await VerifyWebhook(
       request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
     ).catch((cause: unknown) => cause);
-    assert.ok(error instanceof PaymentError);
-    assert.equal(error instanceof WebhookVerificationError, false);
+    assert.ok(IsKind(error, PaymentError));
+    assert.equal(IsKind(error, WebhookVerificationError), false);
   });
 
   it("resolves undefined for a genuine delivery of a type it does not model, whatever its data holds", async () => {
@@ -379,8 +379,8 @@ describe("[checkout-com] webhook verification", () => {
       const error = await VerifyWebhook(
         request({ "cko-signature": Sign(raw, TEST_WEBHOOK_KEY) }, raw),
       ).catch((cause: unknown) => cause);
-      assert.ok(error instanceof PaymentError, `${raw} is refused`);
-      assert.equal(error instanceof WebhookVerificationError, false);
+      assert.ok(IsKind(error, PaymentError), `${raw} is refused`);
+      assert.equal(IsKind(error, WebhookVerificationError), false);
     }
   });
 });

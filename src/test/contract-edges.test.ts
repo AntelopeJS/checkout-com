@@ -29,6 +29,7 @@ import {
   email,
   key,
   reference,
+  IsKind,
 } from "./support";
 
 const EPOCH_MILLIS_FLOOR = Date.UTC(2020, 0, 1);
@@ -67,7 +68,7 @@ describe("[checkout-com] refunds that do not exist", function () {
     await assert.rejects(
       () => RefundPayment({ payment: absent }, key()),
       (cause: unknown) =>
-        cause instanceof PaymentNotFoundError &&
+        IsKind(cause, PaymentNotFoundError) &&
         cause.message === `No such payment: ${absent}`,
     );
   });
@@ -81,7 +82,7 @@ describe("[checkout-com] capturing what Checkout.com captures by itself", functi
     await assert.rejects(
       () => CapturePayment(payment.id, key()),
       (cause: unknown) =>
-        cause instanceof InvalidPaymentStateError &&
+        IsKind(cause, InvalidPaymentStateError) &&
         cause.providerCode === "automatic_capture",
     );
     const settled = await Settled(payment.id, "succeeded");
@@ -185,7 +186,7 @@ describe("[checkout-com] hosted pages and customers", function () {
           key(),
         ),
       (cause: unknown) =>
-        cause instanceof CustomerNotFoundError &&
+        IsKind(cause, CustomerNotFoundError) &&
         cause.message === `No such customer: ${absent}`,
     );
   });

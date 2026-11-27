@@ -27,6 +27,7 @@ import {
   email,
   key,
   reference,
+  IsKind,
 } from "./support";
 
 const EUR = { value: 2500, currency: "EUR" };
@@ -153,7 +154,7 @@ describe("[checkout-com] one idempotency key", function () {
       if (answer.status === "fulfilled") continue;
       const error: unknown = answer.reason;
       assert.ok(
-        error instanceof PaymentError && error.name === "PaymentError",
+        IsKind(error, PaymentError) && error.name === "PaymentError",
         "a refused duplicate is a plain, retryable PaymentError",
       );
       assert.equal(error.providerCode, "duplicate_request");
@@ -301,7 +302,7 @@ describe("[checkout-com] refunds", function () {
       { payment: payment.id, amount: { value: 1000, currency: "EUR" } },
       key(),
     ).catch((cause: unknown) => cause);
-    assert.ok(error instanceof PaymentError);
+    assert.ok(IsKind(error, PaymentError));
     assert.equal(error.providerCode, "refund_authorization_declined");
   });
 });
